@@ -27,17 +27,17 @@ const toHex = (data, delim = '') => {
 }
 
 /**
- * Companion instance class tsp
- * creates a small TCP server for a selected serial port
+ * Companion instance class Visca2Ip
+ * transposes Visca serial commands to Visca over Ip frames.
  *
  * @extends InstanceBase
  * @version 2.1.0
  * @since 1.0.0
- * @author John A Knight, Jr <istnv@istnv.com>
+ * @author Cédric Joder
  */
-class TSPInstance extends InstanceBase {
+class Visca2IpInstance extends InstanceBase {
 	/**
-	 * Create a new instance of class ip-serial
+	 * Create a new instance of class Visca-serial2Ip
 	 * @param {Object} internal -	Internal Companion reference
 	 * @version 2.1.0
 	 * @since 1.0.0
@@ -54,7 +54,7 @@ class TSPInstance extends InstanceBase {
 		this.tSockets = []
 		this.sPortPath = 'none'
 		this.isOpen = false
-		this.IPPort = 32100
+		this.IPPort = 52381
 		this.devMode = process.env.DEVELOPER
 	}
 
@@ -123,7 +123,7 @@ class TSPInstance extends InstanceBase {
 		this.config = config
 		this.clearAll()
 		this.isListening = false
-		this.IPPort = config.iport || 32100
+		this.IPPort = config.iport || 52381
 		this.sPortPath = config.sport || 'none'
 		this.tSockets = []
 		this.isOpen = false
@@ -477,7 +477,7 @@ class TSPInstance extends InstanceBase {
 				id: 'info',
 				width: 12,
 				label: 'Information',
-				value: 'This is a helper module to provide TCP access to a serial port',
+				value: 'This is a helper module to convert Visca over serial commands to Visco over IP',
 			},
 			{
 				type: 'textinput',
@@ -594,12 +594,75 @@ class TSPInstance extends InstanceBase {
 					type: 'textinput',
 					id: 'errormessage',
 					label: 'Message to emit to TCP Clients if no response received',
-					default: 'ERR:NORESPONSE',
+					default: '&& ERR:NORESPONSE',
 					width: 3,
 					isVisible: (configValues) => configValues.response === true,
 				}
 			)
+			
+			// Number of devices 
+			fields.push(
+		  	{
+			    type: 'number',
+	  		  id: 'devicesNumber',
+		  	  label: 'Devices number',
+			    tooltip: 'Enter the number of IP-controlled devices',
+		  	  width: 3,
+		  	  default: 1,
+		  	  min: 1,
+		  	  max: 7,
+	  		  required: true
+			  },
+		  	{
+			    type: 'number',
+	  		  id: 'firstID',
+		  	  label: '1st Device ID',
+			    tooltip: 'ID of the first device',
+		  	  width: 3,
+		  	  default: 1,
+		  	  min: 1,
+		  	  max: 7,
+	  		  required: true
+			  },
+			)
+			
+			// Devices Ip addresses and ports
+			for (let i=1; i<8; i++){
+			  fields.push(
+			    {
+            type: 'textinput',
+			    	id: 'IP'+i,
+			    	label: 'Device ' + i + 'IP',
+			    	tooltip: 'Enter the IP address of the machine number ' + i,
+		      	width: 8,
+		     		regex: Regex.IP,
+		     		isVisible: (options) => {(i >= options.firstID) && (i < (options.firstID + options.devicesNumber));}
+			    },
+			    {
+            type: 'textinput',
+			    	id: 'port'+i,
+			    	label: 'Device ' + i + 'port',
+			    	tooltip: 'Enter the port number of the machine number ' + i,
+		      	width: 8,
+		      	default: '52381',
+		     		regex: Regex.PORT,
+		     		isVisible: (options) => {(i >= options.firstID) && (i < (options.firstID + options.devicesNumber));}
+			    },
+			  )
+			  
+			  fields.push(
+			    {
+			      type: 'checkbox',
+					  id: 'verbose',
+			  		label: 'Verbose log',
+			  		default: false,
+		  			width: 3,
+			    }
+			  )
+			}
 		}
+		
+		
 
 		return fields
 	}

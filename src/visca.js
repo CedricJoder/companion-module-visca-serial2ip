@@ -4,7 +4,7 @@ const COMMAND = Buffer.from([0x01, 0x00])
 const CONTROL = Buffer.from([0x02, 0x00])
 const INQUIRY = Buffer.from([0x01, 0x10])
 
-export class Visca {
+export class ViscaOIP {
 	constructor(_self) {
 		self = _self
 	}
