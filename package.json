@@ -1,6 +1,6 @@
 {
-	"name": "generic-tcp-serial",
-	"version": "2.4.0",
+	"name": "visca-serial2ip",
+	"version": "1.0.0",
 	"main": "index.js",
 	"type": "module",
 	"scripts": {
@@ -8,7 +8,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/bitfocus/companion-module-generic-tcp-serial.git"
+		"url": "git+https://CedricJoder/bitfocus/companion-module-visca-serial2ip.git"
 	},
 	"license": "MIT",
 	"dependencies": {

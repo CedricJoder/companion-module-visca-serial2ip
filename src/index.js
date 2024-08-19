@@ -1,6 +1,5 @@
 /**
- * Class tsp TCP Server for Companion
- * Copyright 2020 Information Systems Technology
+ * Class Visca2IP converts serial Visca commands to Visca over IP
  */
 
 /* eslint-disable no-useless-escape */
@@ -8,7 +7,7 @@ import { combineRgb, Regex, TCPHelper } from '@companion-module/base'
 import * as net from 'net'
 import { runEntrypoint, InstanceBase, InstanceStatus } from '@companion-module/base'
 import { SerialPort } from 'serialport'
-
+import { Visca } from './visca.js'
 import * as CHOICES from './choices.js'
 
 const UpgradeScripts = []
