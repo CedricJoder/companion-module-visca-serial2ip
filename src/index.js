@@ -521,7 +521,7 @@ class Visca2IpInstance extends InstanceBase {
 			} else {
 				ports = [{ id: 'none', label: 'No serial ports detected' }]
 			}
-
+  
 			fields.push(
 				{
 					type: 'dropdown',
@@ -601,70 +601,68 @@ class Visca2IpInstance extends InstanceBase {
 					isVisible: (configValues) => configValues.response === true,
 				}
 			)
-			
-			// Number of devices 
-			fields.push(
-		  	{
-			    type: 'number',
-	  		  id: 'devicesNumber',
-		  	  label: 'Devices number',
-			    tooltip: 'Enter the number of IP-controlled devices',
-		  	  width: 3,
-		  	  default: 1,
-		  	  min: 1,
-		  	  max: 7,
-	  		  required: true
-			  },
-		  	{
-			    type: 'number',
-	  		  id: 'firstID',
-		  	  label: '1st Device ID',
-			    tooltip: 'ID of the first device',
-		  	  width: 3,
-		  	  default: 1,
-		  	  min: 1,
-		  	  max: 7,
-	  		  required: true
-			  },
-			)
-			
-			// Devices Ip addresses and ports
-			for (let i=1; i<8; i++){
-			  fields.push(
-			    {
-            type: 'textinput',
-			    	id: 'IP'+i,
-			    	label: 'Device ' + i + 'IP',
-			    	tooltip: 'Enter the IP address of the machine number ' + i,
-		      	width: 8,
-		     		regex: Regex.IP,
-		     		isVisible: (options) => {(i >= options.firstID) && (i < (options.firstID + options.devicesNumber));}
-			    },
-			    {
-            type: 'textinput',
-			    	id: 'port'+i,
-			    	label: 'Device ' + i + 'port',
-			    	tooltip: 'Enter the port number of the machine number ' + i,
-		      	width: 8,
-		      	default: '52381',
-		     		regex: Regex.PORT,
-		     		isVisible: (options) => {(i >= options.firstID) && (i < (options.firstID + options.devicesNumber));}
-			    },
-			  )
-			  
-			  fields.push(
-			    {
-			      type: 'checkbox',
-					  id: 'verbose',
-			  		label: 'Verbose log',
-			  		default: false,
-		  			width: 3,
-			    }
-			  )
-			}
 		}
 		
-		
+		// Number of devices 
+		fields.push(
+		 	{
+		    type: 'number',
+  		  id: 'devicesNumber',
+		 	  label: 'Devices number',
+		    tooltip: 'Enter the number of IP-controlled devices',
+	  	  width: 3,
+	  	  default: 1,
+		    min: 1,
+		 	  max: 7,
+	 		  required: true
+		  },
+	  	{
+		    type: 'number',
+	  	  id: 'firstID',
+		    label: '1st Device ID',
+		    tooltip: 'ID of the first device',
+	  	  width: 3,
+		  	default: 1,
+		    min: 1,
+		 	  max: 7,
+	 		  required: true
+		  },
+		)
+			
+		// Devices Ip addresses and ports
+		for (let i=1; i<8; i++){
+		  fields.push(
+			  {
+          type: 'textinput',
+		    	id: 'IP'+i,
+		    	label: 'Device ' + i + 'IP',
+			   	tooltip: 'Enter the IP address of the machine number ' + i,
+		     	width: 8,
+	    		regex: Regex.IP,
+		    	isVisible: (options) => {(i >= options.firstID) && (i < (options.firstID + options.devicesNumber));}
+			  },
+		    {
+          type: 'textinput',
+			   	id: 'port'+i,
+			   	label: 'Device ' + i + 'port',
+			    	tooltip: 'Enter the port number of the machine number ' + i,
+		     	width: 8,
+		     	default: '52381',
+		   		regex: Regex.PORT,
+		   		isVisible: (options) => {(i >= options.firstID) && (i < (options.firstID + options.devicesNumber));}
+		    },
+		  )
+			  
+		  fields.push(
+		    {
+			    type: 'checkbox',
+				  id: 'verbose',
+		  		label: 'Verbose log',
+			 		default: false,
+		 			width: 3,
+		    }
+		  )
+		}
 
 		return fields
 	}
