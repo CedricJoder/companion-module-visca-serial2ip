@@ -637,7 +637,7 @@ class Visca2IpInstance extends InstanceBase {
 		    	id: 'IP'+i,
 		    	label: 'Device ' + i + ' IP',
 			   	tooltip: 'Enter the IP address of the machine number ' + i,
-		     	width: 8,
+		     	width: 3,
 	    		regex: Regex.IP,
 		    	isVisible: (options) => {return (i >= options.firstID) && (i < (options.firstID + options.devicesNumber));}
 			  },
@@ -646,7 +646,7 @@ class Visca2IpInstance extends InstanceBase {
 			   	id: 'port'+i,
 			   	label: 'Device ' + i + ' port',
 			    	tooltip: 'Enter the port number of the machine number ' + i,
-		     	width: 8,
+		     	width: 3,
 		     	default: '52381',
 		   		regex: Regex.PORT,
 		   		isVisible: (options) => {(i >= options.firstID) && (i < (options.firstID + options.devicesNumber));}
