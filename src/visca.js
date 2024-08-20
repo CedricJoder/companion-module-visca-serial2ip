@@ -41,7 +41,7 @@ export class ViscaOIP {
 			payload.copy(buffer, 8)
 		}
 
-    if (self!.config!.verbose){
+    if (self && self.config && self.config.verbose){
 		  self.log('debug', this.msgToString(buffer))
     }
 		let lastCmdSent = this.msgToString(buffer.slice(8), false)
