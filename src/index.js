@@ -670,4 +670,4 @@ class Visca2IpInstance extends InstanceBase {
 	}
 }
 
-runEntrypoint(TSPInstance, UpgradeScripts)
+runEntrypoint(Visca2IpInstance, UpgradeScripts)
