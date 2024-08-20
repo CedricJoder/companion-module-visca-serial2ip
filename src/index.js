@@ -639,7 +639,10 @@ class Visca2IpInstance extends InstanceBase {
 			   	tooltip: 'Enter the IP address of the machine number ' + i,
 		     	width: 3,
 	    		regex: Regex.IP,
-		    	isVisible: (options) => {return (i >= options.firstID) && (i < (options.firstID + options.devicesNumber));}
+		    	isVisible: (options) => {
+		    	  this.log('debug', 'id='+i)
+            this.log('debug', 'firstid='+ options.firstID)
+		    	  return (i >= options.firstID) && (i < (options.firstID + options.devicesNumber));}
 			  },
 		    {
           type: 'textinput',
