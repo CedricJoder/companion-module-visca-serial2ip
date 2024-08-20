@@ -635,16 +635,16 @@ class Visca2IpInstance extends InstanceBase {
 			  {
           type: 'textinput',
 		    	id: 'IP'+i,
-		    	label: 'Device ' + i + 'IP',
+		    	label: 'Device ' + i + ' IP',
 			   	tooltip: 'Enter the IP address of the machine number ' + i,
 		     	width: 8,
 	    		regex: Regex.IP,
-		    	isVisible: (options) => {(i >= options.firstID) && (i < (options.firstID + options.devicesNumber));}
+		    	isVisible: (options) => {return (i >= options.firstID) && (i < (options.firstID + options.devicesNumber));}
 			  },
 		    {
           type: 'textinput',
 			   	id: 'port'+i,
-			   	label: 'Device ' + i + 'port',
+			   	label: 'Device ' + i + ' port',
 			    	tooltip: 'Enter the port number of the machine number ' + i,
 		     	width: 8,
 		     	default: '52381',
@@ -652,17 +652,16 @@ class Visca2IpInstance extends InstanceBase {
 		   		isVisible: (options) => {(i >= options.firstID) && (i < (options.firstID + options.devicesNumber));}
 		    },
 		  )
-			  
-		  fields.push(
-		    {
-			    type: 'checkbox',
-				  id: 'verbose',
-		  		label: 'Verbose log',
-			 		default: false,
-		 			width: 3,
-		    }
-		  )
-		}
+		}	  
+	 fields.push(
+	    {
+		    type: 'checkbox',
+			  id: 'verbose',
+	  		label: 'Verbose log',
+		 		default: false,
+	 			width: 3,
+	    }
+    )
 
 		return fields
 	}
