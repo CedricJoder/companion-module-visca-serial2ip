@@ -7,7 +7,7 @@ import { combineRgb, Regex, TCPHelper } from '@companion-module/base'
 import * as net from 'net'
 import { runEntrypoint, InstanceBase, InstanceStatus } from '@companion-module/base'
 import { SerialPort } from 'serialport'
-import { Visca } from './visca.js'
+import { ViscaOIP } from './visca.js'
 import * as CHOICES from './choices.js'
 
 const UpgradeScripts = []
@@ -56,6 +56,8 @@ class Visca2IpInstance extends InstanceBase {
 		this.isOpen = false
 		this.IPPort = 52381
 		this.devMode = process.env.DEVELOPER
+		
+		this.viscaOIP = []
 	}
 
 	/**

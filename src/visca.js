@@ -1,3 +1,5 @@
+import { UDPHelper } from '@companion-module/base'
+
 let self
 let packet_counter = 0
 const COMMAND = Buffer.from([0x01, 0x00])
@@ -5,8 +7,9 @@ const CONTROL = Buffer.from([0x02, 0x00])
 const INQUIRY = Buffer.from([0x01, 0x10])
 
 export class ViscaOIP {
-	constructor(_self) {
+	constructor(_self, id, ip, port=53281) {
 		self = _self
+		this.id = id
 	}
 
 	get command() {
@@ -18,6 +21,39 @@ export class ViscaOIP {
 	get inquiry() {
 		return INQUIRY
 	}
+	
+	init_udp() {
+    if (this.udp) {
+      this.udp.destroy()
+      delete this.udp
+      this.updateStatus(InstanceStatus.Disconnected)
+    }
+
+    self.updateStatus(InstanceStatus.Connecting)
+
+    this.udp = new UDPHelper(ip,port)
+
+    // Reset sequence number
+    this.send('\x01', this.control)
+    this.packet_counter = 0
+
+    this.udp.on('error', (err) => {
+      self.updateStatus(InstanceStatus.ConnectionFailure, err.message)
+      self.log('error', 'Network error: ' + err.message)
+    })
+
+    // If the status is 'listening', connection should be established
+    this.udp.on('listening', () => {
+      self.log('info', 'UDP listening')
+      self.updateStatus(InstanceStatus.Ok)
+    })
+
+    this.udp.on('status_change', (status, message) => {
+      self.log('debug', 'UDP status_change: ' + status)
+      self.updateStatus(status, message)
+    })
+  }
+	
 
 	send(payload, type = this.command) {
 		const buffer = Buffer.alloc(payload.length + 8)
