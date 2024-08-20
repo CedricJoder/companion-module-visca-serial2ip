@@ -1,5 +1,5 @@
 {
-	"name": "visca-serial2ip",
+	"name": "sony-visca-serial2ip",
 	"version": "1.0.0",
 	"main": "index.js",
 	"type": "module",
