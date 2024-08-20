@@ -1,8 +1,8 @@
 {
-	"id": "generic-tcp-serial",
-	"name": "generic-tcp-serial",
-	"shortname": "tsp",
-	"description": "Generic IP to serial interface module",
+	"id": "generic-visca-serial2ip",
+	"name": "generic-visca-serial2ip",
+	"shortname": "visca2ip",
+	"description": "Visca commands converter from serial interface to IP",
 	"version": "0.0.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-generic-tcp-serial.git",
