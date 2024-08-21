@@ -639,10 +639,9 @@ class Visca2IpInstance extends InstanceBase {
 			   	tooltip: 'Enter the IP address of the machine number ' + i,
 		     	width: 3,
 	    		regex: Regex.IP,
-		    	isVisible: (options) => {
-		    	  this.log('debug', 'id='+i)
-            this.log('debug', 'firstid='+ options.firstID)
-		    	  return (i >= options.firstID) && (i < (options.firstID + options.devicesNumber));}
+		    	isVisible: (options, data) => {
+		    	  return (data.i >= options.firstID) && (data.i < (options.firstID + options.devicesNumber));},
+          isVisibleData: {"i" : i}
 			  },
 		    {
           type: 'textinput',
@@ -652,7 +651,8 @@ class Visca2IpInstance extends InstanceBase {
 		     	width: 3,
 		     	default: '52381',
 		   		regex: Regex.PORT,
-		   		isVisible: (options, data) => {return (options.devicesNumber > data.i);},
+          isVisible: (options, data) => {
+		    	  return (data.i >= options.firstID) && (data.i < (options.firstID + options.devicesNumber));},
 		   		isVisibleData: {"i" : i}
 		    },
 		  )
