@@ -652,7 +652,7 @@ class Visca2IpInstance extends InstanceBase {
 		     	width: 3,
 		     	default: '52381',
 		   		regex: Regex.PORT,
-		   		isVisible: (options) => {return options.devicesNumber > i;}
+		   		isVisible: (options) => {return (options.devicesNumber > 4);}
 		    },
 		  )
 		}	  
