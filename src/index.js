@@ -90,6 +90,10 @@ class Visca2IpInstance extends InstanceBase {
 			}
 			delete this.sPort
 		}
+		if (this.viscaOIP) {
+		  this.viscaOIP.forEach((visca) => visca.destroy())
+		  delete this.viscaOIP
+		}
 	}
 
 	/**

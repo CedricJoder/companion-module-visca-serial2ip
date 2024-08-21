@@ -22,6 +22,13 @@ export class ViscaOIP {
 		return INQUIRY
 	}
 	
+	destroy() {
+	  if (this.udp) {
+      this.udp.destroy()
+      delete this.udp
+      this.updateStatus(InstanceStatus.Disconnected)
+    }
+	}
 	init_udp() {
     if (this.udp) {
       this.udp.destroy()
