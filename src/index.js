@@ -47,7 +47,7 @@ class Visca2IpInstance extends InstanceBase {
 
 		// Wait a few seconds so we don't spam log with 'no ports/unconfigured'
 		// as those processes take a few moments to settle
-//		this.LOG_DELAY = 10000
+		this.LOG_DELAY = 10000
 
 		// module defaults
 		this.foundPorts = []
@@ -652,7 +652,7 @@ class Visca2IpInstance extends InstanceBase {
 		     	width: 3,
 		     	default: '52381',
 		   		regex: Regex.PORT,
-		   		isVisible: (options) => {(i >= options.firstID) && (i < (options.firstID + options.devicesNumber));}
+		   		isVisible: (options) => {return options.verbose}
 		    },
 		  )
 		}	  
