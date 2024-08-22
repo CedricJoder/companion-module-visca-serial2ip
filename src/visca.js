@@ -12,6 +12,8 @@ export class ViscaOIP {
 	constructor(_self, id, ip, port=53281) {
 		self = _self
 		this.id = id
+		this.ip = ip
+		this.port = port
 	}
 
 	get command() {
@@ -31,7 +33,8 @@ export class ViscaOIP {
       this.updateStatus(InstanceStatus.Disconnected)
     }
 	}
-	init_udp() {
+	
+	init() {
     if (this.udp) {
       this.udp.destroy()
       delete this.udp
@@ -40,7 +43,7 @@ export class ViscaOIP {
 
     self.updateStatus(InstanceStatus.Connecting)
 
-    this.udp = new UDPHelper(ip,port)
+    this.udp = new UDPHelper(this.ip,this.port)
 
     // Reset sequence number
     this.send('\x01', this.control)
@@ -108,4 +111,60 @@ export class ViscaOIP {
 		}
 		return s.trim()
 	}
+}
+
+
+export class ViscaSerial {
+	constructor(_self) {
+		self = _self
+	}
+		/**
+	 * Initialize the serial port and attach for read/write
+	 * @since 1.0.0
+	 */
+	init(portOptions) {
+	  this.portOptions = {
+      path: portOptions.path,
+      autoOpen: portOptions.autoOpen || false,
+      baudRate: portOptions.baudRate || 9600,
+      dataBits: portOptions.dataBits || 8,
+      stopBits: portOptions.stopBits || 1,
+      parity: portOptions.parity || 'none'
+    }
+    
+		if (this.portOptions.path == '' || this.portOptions.path === 'none') {
+			// not configured yet
+			return
+		}
+
+		this.sPort = new SerialPort(portOptions)
+
+		this.sPort.on('error', self.doUpdateStatus.bind(self))
+
+	//	this.sPort.on('open', this.init_tcp.bind(this))
+
+		this.sPort.on('close', (err) => {
+			self.doUpdateStatus(err)
+			if (err.disconnected) {
+				// close all connections
+				self.tSockets.forEach((sock) => sock.end())
+				self.tServer.close()
+				self.isListening = false
+			}
+		})
+
+		this.sPort.on('data', (data) => {
+			let receiver = data.readUInt8(0)%16
+			let sender = ((data.readUInt8(0)/16)|0) - 8
+			let msg = data.subarray(1)
+			
+			self.send(msg, sender, receiver)
+		})
+
+		this.sPort.open()
+
+		self.doUpdateStatus()
+	}
+
+	
 }

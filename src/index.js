@@ -7,7 +7,7 @@ import { combineRgb, Regex, TCPHelper } from '@companion-module/base'
 import * as net from 'net'
 import { runEntrypoint, InstanceBase, InstanceStatus } from '@companion-module/base'
 import { SerialPort } from 'serialport'
-import { ViscaOIP } from './visca.js'
+import { ViscaOIP, ViscaSerial } from './visca.js'
 import * as CHOICES from './choices.js'
 
 const UpgradeScripts = []
@@ -91,9 +91,14 @@ class Visca2IpInstance extends InstanceBase {
 			}
 			delete this.sPort
 		}
+		
 		if (this.viscaOIP) {
 		  this.viscaOIP.forEach((visca) => visca.destroy())
 		  delete this.viscaOIP
+		}
+		if (this.viscaSerial) {
+		  this.viscaSerial.destroy()
+		  delete this.viscaSerial
 		}
 	}
 
