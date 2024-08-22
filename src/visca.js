@@ -1,4 +1,6 @@
 import { UDPHelper } from '@companion-module/base'
+import { SerialPort } from 'serialport'
+
 
 let self
 let packet_counter = 0
@@ -58,6 +60,10 @@ export class ViscaOIP {
     this.udp.on('status_change', (status, message) => {
       self.log('debug', 'UDP status_change: ' + status)
       self.updateStatus(status, message)
+    })
+    
+    this.udp.on('message', (data) => {
+      self.send(data.subarray(8), this.id)
     })
   }
 	

@@ -58,6 +58,7 @@ class Visca2IpInstance extends InstanceBase {
 		this.devMode = process.env.DEVELOPER
 		
 		this.viscaOIP = []
+		this.viscaSerial = undefined
 	}
 
 	/**
@@ -673,6 +674,23 @@ class Visca2IpInstance extends InstanceBase {
 
 		return fields
 	}
+	
+	send (msg, senderId=0, receiverId=0){
+	  if (receiverId == 8) {
+	    this.viscaOIP.forEach((visca) => {
+	      visca.send(msg)
+	    })
+      this.viscaSerial.send(msg, senderId, receiverId)
+	  }
+	  else if (this.viscaOIP[receiverId]){
+	    this.viscaOIP[receiverId].send(msg)
+	  }
+	  else {
+	    this.viscaSerial.send(msg, senderId, receiverId)
+	  }
+	}
+	
+	
 }
 
 runEntrypoint(Visca2IpInstance, UpgradeScripts)
