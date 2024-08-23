@@ -657,7 +657,7 @@ class Visca2IpInstance extends InstanceBase {
           type: 'textinput',
 			   	id: 'port'+i,
 			   	label: 'Device ' + i + ' port',
-			    	tooltip: 'Enter the port number of the machine number ' + i,
+			    tooltip: 'Enter the port number of the machine number ' + i,
 		     	width: 3,
 		     	default: '52381',
 		   		regex: Regex.PORT,
@@ -665,6 +665,14 @@ class Visca2IpInstance extends InstanceBase {
 		    	  return (data.i >= options.firstID) && (data.i < (options.firstID + options.devicesNumber));},
 		   		isVisibleData: {"i" : i}
 		    },
+		    {
+		      type: 'checkbox',
+		      id: 'RemoteSerial' + i,
+		      label: 'Device ' + i + ' remote serial',
+		      tooltip: 'Check if device number ' + i + ' is controlled by serial Visca on a remote IP machine',
+		      default: false,
+		      width: 3
+		    }
 		  )
 		}	  
 	 fields.push(
@@ -680,7 +688,8 @@ class Visca2IpInstance extends InstanceBase {
 		return fields
 	}
 	
-	send (msg, senderId=0, receiverId=0){
+	send (msg, msgInfo, senderId=0, receiverId=0){
+	  
 	  if (receiverId == 8) {
 	    this.viscaOIP.forEach((visca) => {
 	      visca.send(msg)

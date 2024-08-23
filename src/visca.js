@@ -8,12 +8,24 @@ const COMMAND = Buffer.from([0x01, 0x00])
 const CONTROL = Buffer.from([0x02, 0x00])
 const INQUIRY = Buffer.from([0x01, 0x10])
 
+function msgToString(msg, separateBlocks = true) {
+		let s = ''
+		for (let i = 0; i < msg.length; i++) {
+			s += msg[i].toString(16).padStart(2, '0') + ' '
+			if (separateBlocks && (i == 1 || i == 3 || i == 7 || i == 15 || i == 23)) {
+				s += '| '
+			}
+		}
+		return s.trim()
+	}
+
 export class ViscaOIP {
-	constructor(_self, id, ip, port=53281) {
+	constructor(_self, id, ip, port=53281, remoteSerial = false) {
 		self = _self
 		this.id = id
 		this.ip = ip
 		this.port = port
+		this.remoteSerial = remoteSerial
 	}
 
 	get command() {
@@ -66,39 +78,77 @@ export class ViscaOIP {
     })
     
     this.udp.on('message', (data) => {
-      self.send(data.subarray(8), this.id)
+      let msg
+      let msgInfo = {
+        sender: this.id
+        receiver: 0
+      }
+      
+      if (this.remoteSerial) {
+        let header = data.readUInt8(0)
+        msgInfo.sender = ((header/16)|0)-8
+        if (msgInfo.sender!=this id) {
+          // filter 
+          return
+        }
+        msgInfo.receiver = header%16
+        msg = data.subarray(1)
+        
+      } else {
+        msg = data.subarray(8)
+        msgInfo.type = subarray(0,2)
+      }
+      self.send(msg, msgInfo)
     })
   }
 	
 
-	send(payload, type = this.command) {
-		const buffer = Buffer.alloc(payload.length + 8)
-		type.copy(buffer)
+	send(payload, msgInfo) {
+	  if (this.remoteSerial) {
+	    let sender = msgInfo.sender ? msgInfo.sender-8 : 0
+	    let receiver= msgInfo.receiver || 0
+	  
+	    const buffer = Buffer.alloc(payload.length + 1)
+	    let header = 128 + (16*sender) + receiver
+	    buffer.writeUInt8(header, 0)
+	    
+	    if (typeof payload == 'string') {
+        buffer.write(payload, 1, 'binary')
+      } else if (typeof payload == 'object' && payload instanceof Buffer) {
+          payload.copy(buffer, 1)
+      }
+	  } else {
+	    let type = msgInfo.type || this.command
+  		const buffer = Buffer.alloc(payload.length + 8)
+	  	type.copy(buffer)
 
-		if (packet_counter == 0xffffffff) {
-			packet_counter = 0
-			// Reset sequence number
-			const resetBuffer = Buffer.alloc(9)
-			resetBuffer.write('020000010000000001', 'hex')
-			self.udp.send(resetBuffer)
-		}
-		packet_counter = packet_counter + 1
+  		if (packet_counter == 0xffffffff) {
+	  		packet_counter = 0
+		  	// Reset sequence number
+  			const resetBuffer = Buffer.alloc(9)
+	  		resetBuffer.write('020000010000000001', 'hex')
+		  	self.udp.send(resetBuffer)
+  		}
+	  	packet_counter = packet_counter + 1
 
-		buffer.writeUInt16BE(payload.length, 2)
-		buffer.writeUInt32BE(packet_counter, 4)
+		  buffer.writeUInt16BE(payload.length, 2)
+  		buffer.writeUInt32BE(packet_counter, 4)
 
-		if (typeof payload == 'string') {
-			buffer.write(payload, 8, 'binary')
-		} else if (typeof payload == 'object' && payload instanceof Buffer) {
-			payload.copy(buffer, 8)
-		}
-
-    if (self && self.config && self.config.verbose){
-		  self.log('debug', this.msgToString(buffer))
+	  	if (typeof payload == 'string') {
+	  		buffer.write(payload, 8, 'binary')
+  		} else if (typeof payload == 'object' && payload instanceof Buffer) {
+		  	payload.copy(buffer, 8)
+		  }
     }
+    
+    if (self && self.config && self.config.verbose){
+	  self.log('debug', this.msgToString(buffer))
+    }
+    
+    this.lastCmdSent = buffer
 		let lastCmdSent = this.msgToString(buffer.slice(8), false)
 		self.setVariableValues({ lastCmdSent: lastCmdSent })
-		self.udp.send(buffer)
+		this.udp.send(buffer)
 	}
 
 	msgToString(msg, separateBlocks = true) {
@@ -132,7 +182,7 @@ export class ViscaSerial {
       parity: portOptions.parity || 'none'
     }
     
-		if (this.portOptions.path == '' || this.portOptions.path === 'none') {
+		if (!this.portOptions || this.portOptions.path == '' || this.portOptions.path === 'none') {
 			// not configured yet
 			return
 		}
@@ -166,5 +216,24 @@ export class ViscaSerial {
 		self.doUpdateStatus()
 	}
 
+  send(payload, msgInfo) {
+	  let sender = msgInfo.sender ? msgInfo.sender-8 : 0
+	  let receiver= msgInfo.receiver || 0
+	  
+	  const buffer = Buffer.alloc(payload.length + 1)
+	  let header = 128 + (16*sender) + receiver
+	  buffer.writeUInt8(header, 0)
+	    
+	  if (typeof payload == 'string') {
+      buffer.write(payload, 1, 'binary')
+    } else if (typeof payload == 'object' && payload instanceof Buffer) {
+      payload.copy(buffer, 1)
+    }
+    let lastCmdSent = msgToString(buffer.slice(1), false)
+		self.setVariableValues({ 
+		  lastCmdSent: lastCmdSent,
+		})
+    this.sPort.write(buffer)
+  }
 	
 }
