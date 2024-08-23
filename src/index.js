@@ -671,7 +671,10 @@ class Visca2IpInstance extends InstanceBase {
 		      label: 'Device ' + i + ' remote serial',
 		      tooltip: 'Check if device number ' + i + ' is controlled by serial Visca on a remote IP machine',
 		      default: false,
-		      width: 3
+		      width: 3,
+		      isVisible: (options, data) => {
+		    	  return (data.i >= options.firstID) && (data.i < (options.firstID + options.devicesNumber));},
+		   		isVisibleData: {"i" : i}
 		    }
 		  )
 		}	  
