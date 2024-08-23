@@ -80,14 +80,14 @@ export class ViscaOIP {
     this.udp.on('message', (data) => {
       let msg
       let msgInfo = {
-        sender: this.id
+        sender: this.id,
         receiver: 0
       }
       
       if (this.remoteSerial) {
         let header = data.readUInt8(0)
         msgInfo.sender = ((header/16)|0)-8
-        if (msgInfo.sender!=this id) {
+        if (msgInfo.sender!=this.id) {
           // filter 
           return
         }
