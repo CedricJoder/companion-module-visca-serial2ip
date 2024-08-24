@@ -3,7 +3,6 @@ import { SerialPort } from 'serialport'
 
 
 let self
-let packet_counter = 0
 const COMMAND = Buffer.from([0x01, 0x00])
 const CONTROL = Buffer.from([0x02, 0x00])
 const INQUIRY = Buffer.from([0x01, 0x10])
@@ -26,6 +25,7 @@ export class ViscaOIP {
 		this.ip = ip
 		this.port = port
 		this.remoteSerial = remoteSerial
+		this.packet_counter = 0
 	}
 
 	get command() {
@@ -46,7 +46,9 @@ export class ViscaOIP {
     }
 	}
 	
+	
 	init() {
+	  // clear before initializing 
     if (this.udp) {
       this.udp.destroy()
       delete this.udp
@@ -77,68 +79,44 @@ export class ViscaOIP {
       self.updateStatus(status, message)
     })
     
+    // on data receive, parsing and forwarding to the main module for routing
     this.udp.on('message', (data) => {
-      let msg
-      let msgInfo = {
-        sender: this.id,
-        receiver: 0
+      let type
+      if (!this.remoteSerial) {
+        type = data.subarray(0,2)
+        data = data.subarray(8)
       }
-      
-      if (this.remoteSerial) {
-        let header = data.readUInt8(0)
-        msgInfo.sender = ((header/16)|0)-8
-        if (msgInfo.sender!=this.id) {
-          // filter 
-          return
-        }
-        msgInfo.receiver = header%16
-        msg = data.subarray(1)
-        
-      } else {
-        msg = data.subarray(8)
-        msgInfo.type = subarray(0,2)
-      }
-      self.send(msg, msgInfo)
+      self.send(data, type)
     })
   }
 	
-
-	send(payload, msgInfo) {
-	  if (this.remoteSerial) {
-	    let sender = msgInfo.sender ? msgInfo.sender-8 : 0
-	    let receiver= msgInfo.receiver || 0
-	  
-	    const buffer = Buffer.alloc(payload.length + 1)
-	    let header = 128 + (16*sender) + receiver
-	    buffer.writeUInt8(header, 0)
+  // send message through the udp interface
+	send(payload, type) {
+	  let headerSize = (this.remoteSerial) ? 0 : 8
+	  const buffer = Buffer.alloc(payload.length + headerSize)
 	    
-	    if (typeof payload == 'string') {
-        buffer.write(payload, 1, 'binary')
-      } else if (typeof payload == 'object' && payload instanceof Buffer) {
-          payload.copy(buffer, 1)
-      }
-	  } else {
-	    let type = msgInfo.type || this.command
-  		const buffer = Buffer.alloc(payload.length + 8)
-	  	type.copy(buffer)
+	  if (typeof payload == 'string') {
+      buffer.write(payload, headerSize, 'binary')
+    } else if (typeof payload == 'object' && payload instanceof Buffer) {
+      payload.copy(buffer, headerSize)
+    }
+    
+	  if (!this.remoteSerial) {
+	    type = type || this.findType(payload)
 
-  		if (packet_counter == 0xffffffff) {
-	  		packet_counter = 0
+  		if (this.packet_counter == 0xffffffff) {
+  		  this.send('\x01', this.control)
+	  		this.packet_counter = 0
 		  	// Reset sequence number
-  			const resetBuffer = Buffer.alloc(9)
-	  		resetBuffer.write('020000010000000001', 'hex')
-		  	self.udp.send(resetBuffer)
+//  			const resetBuffer = Buffer.alloc(9)
+	 // 		resetBuffer.write('020000010000000001', 'hex')
+//		  	this.udp.send(resetBuffer)
   		}
-	  	packet_counter = packet_counter + 1
 
 		  buffer.writeUInt16BE(payload.length, 2)
-  		buffer.writeUInt32BE(packet_counter, 4)
-
-	  	if (typeof payload == 'string') {
-	  		buffer.write(payload, 8, 'binary')
-  		} else if (typeof payload == 'object' && payload instanceof Buffer) {
-		  	payload.copy(buffer, 8)
-		  }
+  		buffer.writeUInt32BE(this.packet_counter, 4)
+  		
+  		this.packet_counter = this.packet_counter + 1
     }
     
     if (self && self.config && self.config.verbose){
@@ -151,6 +129,7 @@ export class ViscaOIP {
 		this.udp.send(buffer)
 	}
 
+  // message to human readable form for log
 	msgToString(msg, separateBlocks = true) {
 		let s = ''
 		for (let i = 0; i < msg.length; i++) {
@@ -160,6 +139,13 @@ export class ViscaOIP {
 			}
 		}
 		return s.trim()
+	}
+	
+	
+	// finding the type of udp message 
+	findType(msg) {
+	  
+	  return this.command
 	}
 }
 
@@ -204,11 +190,7 @@ export class ViscaSerial {
 		})
 
 		this.sPort.on('data', (data) => {
-			let receiver = data.readUInt8(0)%16
-			let sender = ((data.readUInt8(0)/16)|0) - 8
-			let msg = data.subarray(1)
-			
-			self.send(msg, sender, receiver)
+			self.send(data)
 		})
 
 		this.sPort.open()
@@ -216,20 +198,15 @@ export class ViscaSerial {
 		self.doUpdateStatus()
 	}
 
-  send(payload, msgInfo) {
-	  let sender = msgInfo.sender ? msgInfo.sender-8 : 0
-	  let receiver= msgInfo.receiver || 0
-	  
-	  const buffer = Buffer.alloc(payload.length + 1)
-	  let header = 128 + (16*sender) + receiver
-	  buffer.writeUInt8(header, 0)
+  send(payload, type) {
+	  const buffer = Buffer.alloc(payload.length)
 	    
 	  if (typeof payload == 'string') {
-      buffer.write(payload, 1, 'binary')
+      buffer.write(payload, 0, 'binary')
     } else if (typeof payload == 'object' && payload instanceof Buffer) {
-      payload.copy(buffer, 1)
+      payload.copy(buffer, 0)
     }
-    let lastCmdSent = msgToString(buffer.slice(1), false)
+    let lastCmdSent = msgToString(buffer, false)
 		self.setVariableValues({ 
 		  lastCmdSent: lastCmdSent,
 		})

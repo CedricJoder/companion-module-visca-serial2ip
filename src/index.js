@@ -341,6 +341,7 @@ class Visca2IpInstance extends InstanceBase {
 		}
 		if (setSerial) {
 			this.init_serial()
+			
 		}
 	}
 
@@ -691,19 +692,20 @@ class Visca2IpInstance extends InstanceBase {
 		return fields
 	}
 	
-	send (msg, msgInfo, senderId=0, receiverId=0){
+	send (msg, type){
+	  let receiver = msg.readUInt8(0)%16
 	  
-	  if (receiverId == 8) {
+	  if (receiver == 8) {
 	    this.viscaOIP.forEach((visca) => {
-	      visca.send(msg)
+	      visca.send(msg, type)
 	    })
-      this.viscaSerial.send(msg, senderId, receiverId)
+      this.viscaSerial.send(msg)
 	  }
-	  else if (this.viscaOIP[receiverId]){
-	    this.viscaOIP[receiverId].send(msg)
+	  else if ((typeof this.viscaOIP[receiver]) != undefined) {
+	    this.viscaOIP[receiver].send(msg, type)
 	  }
 	  else {
-	    this.viscaSerial.send(msg, senderId, receiverId)
+	    this.viscaSerial.send(msg)
 	  }
 	}
 	
