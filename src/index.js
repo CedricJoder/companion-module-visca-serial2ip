@@ -723,7 +723,6 @@ class Visca2IpInstance extends InstanceBase {
 	  }
 	}
 	
-	
 }
 
 runEntrypoint(Visca2IpInstance, UpgradeScripts)
