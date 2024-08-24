@@ -706,7 +706,7 @@ class Visca2IpInstance extends InstanceBase {
       return
     }
 	  let receiver = header%16
-	  this.log('debug', 'receiver : '+ receiver)
+//	  this.log('debug', 'receiver : '+ receiver)
 	  if (receiver == 8) {
 	    this.viscaOIP.forEach((visca) => {
 	      visca.send(msg, type)
@@ -714,11 +714,12 @@ class Visca2IpInstance extends InstanceBase {
       this.viscaSerial.send(msg)
 	  }
 	  else if (this.viscaOIP[receiver]) {
-	    this.log('debug', 'interface : '+ this.viscaOIP[receiver])
 	    this.viscaOIP[receiver].send(msg, type)
 	  }
 	  else {
-	    this.viscaSerial.send(msg)
+	    if (this.viscaSerial) {
+	      this.viscaSerial.send(msg)
+	    }
 	  }
 	}
 	
