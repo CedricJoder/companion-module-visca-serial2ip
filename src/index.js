@@ -12,6 +12,8 @@ import * as CHOICES from './choices.js'
 
 const UpgradeScripts = []
 
+const ADDRESS_SET = Buffer.from [0x88, 0x30, 0x00, 0xFF]
+
 /**
  * Returns the passed string expanded to 2-digit hex for each character
  * @param {string} data: string to hexify
@@ -720,6 +722,22 @@ class Visca2IpInstance extends InstanceBase {
 	    if (this.viscaSerial) {
 	      this.viscaSerial.send(msg)
 	    }
+	  }
+	}
+	
+	setAddress (id) {
+	  for (; id < (this.config.firstID + this.config.devicesNumber); id++) {
+	    let visca=this.viscaOIP[id]
+	    if (visca) {
+	      let msg = Buffer.from(ADDRESS_SET)
+        msg.writeUInt8(id, 2)
+	      visca.send(msg, visca.device_setting)
+	    }
+	  }
+	  if (this.viscaSerial) {
+	    let msg = Buffer.from(ADDRESS_SET)
+	    msg.writeUInt8(id, 2)
+	    this.viscaSerial.send(msg)
 	  }
 	}
 	

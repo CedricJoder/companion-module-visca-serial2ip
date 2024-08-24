@@ -14,6 +14,9 @@ const CONTROL_REPLY = Buffer.from([0x02, 0x01])
 const NETWORK_CHANGE = Buffer.from([0x00, 0x38, 0xFF])
 const RESET_COUNTER = Buffer.from([0x01])
 const IF_CLEAR = Buffer.from([0x01, 0x00, 0x01, 0xFF])
+const ADDRESS_SET = Buffer.from [0x88, 0x30, 0x00, 0xFF]
+
+
 const BROADCAST = Buffer.from([0x88])
 
 
@@ -68,6 +71,9 @@ export class ViscaOIP {
 	}
 	get if_clear() {
 	  return IF_CLEAR
+	}
+	get address_set() {
+	  return ADDRESS_SET
 	}
 	get broadcast() {
 	  return BROADCAST
@@ -137,6 +143,12 @@ export class ViscaOIP {
       // filter broadcast if_clear to prevent loops
       if ((data.subarray(1) == this.if_clear) && (data.subarray(0,1) == this.broadcast)) {
         return
+      }
+      
+      // set_address message
+      if (data.subarray(0,1) == this.address_set.subarray(0,1)) {
+        self.setAddress()
+        return 
       }
       
       self.send(data, type)
