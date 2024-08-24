@@ -696,7 +696,13 @@ class Visca2IpInstance extends InstanceBase {
 	}
 	
 	send (msg, type){
-	  let receiver = msg.readUInt8(0)%16
+	  let header
+	  if (typeof msg == 'string') {
+      header = parseInt(msg[0],16)
+    } else if (typeof onmsgestureend == 'object' && msgestureend instanceof Buffer) {
+      header = msg.readUInt8(0)
+    }
+	  let receiver = header%16
 	  
 	  if (receiver == 8) {
 	    this.viscaOIP.forEach((visca) => {
