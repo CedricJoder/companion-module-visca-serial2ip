@@ -702,7 +702,7 @@ class Visca2IpInstance extends InstanceBase {
     } else if (typeof msg == 'object' && msg instanceof Buffer) {
       header = msg.readUInt8(0)
     } else {
-      this.log('error', "can't sent message")
+      this.log('error', "Wrong message type")
       return
     }
 	  let receiver = header%16

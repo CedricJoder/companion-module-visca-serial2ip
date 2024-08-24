@@ -7,6 +7,8 @@ let self
 const COMMAND = Buffer.from([0x01, 0x00])
 const CONTROL = Buffer.from([0x02, 0x00])
 const INQUIRY = Buffer.from([0x01, 0x10])
+const NETWORK_CHANGE = Buffer.from([0x00, 0x38, 0xFF])
+const RESET_COUNTER = Buffer.from([0x01])
 
 function msgToString(msg, separateBlocks = true) {
 		let s = ''
@@ -40,6 +42,13 @@ export class ViscaOIP {
 	get inquiry() {
 		return INQUIRY
 	}
+	get network_change() {
+	  return NETWORK_CHANGE
+	}
+	get reset_counter() {
+	  return RESET_COUNTER
+	}
+	
 	
 	destroy() {
 	  if (this.udp) {
@@ -64,12 +73,12 @@ export class ViscaOIP {
 
     // send Reset sequence number or Network change command
     if(this.remoteSerial) {
-      let buffer = Buffer.from([0x00, 0x38, 0xFF])
+      let buffer = Buffer.from(this.network_change)
       let header = (this.id+8)*16
       buffer.writeUInt8(header, 0)
       self.send(buffer)
     } else {
-      this.send('\x01', this.control)
+      this.send(this.reset_counter, this.control)
       this.packet_counter = 0
     }
     
