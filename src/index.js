@@ -138,6 +138,9 @@ class Visca2IpInstance extends InstanceBase {
 		this.IPPort = config.iport || 52381
 		this.sPortPath = config.sport || 'none'
 		this.tSockets = []
+		for (let i = config.firstID; i < (config.firstID + config.devicesNumber); i++) {
+		  this.viscaOIP[i] = new ViscaOIP(this, i)
+		}
 		this.isOpen = false
 		this.startedAt = Date.now()
 		this.portScan = setInterval(() => this.scanForPorts(), 5000)
@@ -668,7 +671,7 @@ class Visca2IpInstance extends InstanceBase {
 		    },
 		    {
 		      type: 'checkbox',
-		      id: 'RemoteSerial' + i,
+		      id: 'remoteSerial' + i,
 		      label: 'Device ' + i + ' remote serial',
 		      tooltip: 'Check if device number ' + i + ' is controlled by serial Visca on a remote IP machine',
 		      default: false,

@@ -19,12 +19,12 @@ function msgToString(msg, separateBlocks = true) {
 	}
 
 export class ViscaOIP {
-	constructor(_self, id, ip, port=53281, remoteSerial = false) {
+	constructor(_self, id) {
 		self = _self
 		this.id = id
-		this.ip = ip
-		this.port = port
-		this.remoteSerial = remoteSerial
+		this.ip = self.config['ip'+id]
+		this.port = self.config['port'+id]
+		this.remoteSerial = self.config['remoteSerial'+id]
 		this.packet_counter = 0
 	}
 
