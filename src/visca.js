@@ -122,6 +122,7 @@ export class ViscaOIP {
     this.udp.on('listening', () => {
       self.log('info', 'UDP listening')
       self.updateStatus(InstanceStatus.Ok)
+      self.setAddress()
     })
 
     this.udp.on('status_change', (status, message) => {
@@ -148,6 +149,8 @@ export class ViscaOIP {
       
       self.send(data, type)
     })
+    
+    
   }
 	
   // send message through the udp interface
