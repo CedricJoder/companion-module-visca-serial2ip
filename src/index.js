@@ -12,7 +12,7 @@ import * as CHOICES from './choices.js'
 
 const UpgradeScripts = []
 
-const ADDRESS_SET = Buffer.from [0x88, 0x30, 0x00, 0xFF]
+const ADDRESS_SET = Buffer.from([0x88, 0x30, 0x00, 0xFF])
 
 /**
  * Returns the passed string expanded to 2-digit hex for each character
