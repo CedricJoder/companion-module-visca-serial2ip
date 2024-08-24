@@ -62,9 +62,16 @@ export class ViscaOIP {
 
     this.udp = new UDPHelper(this.ip,this.port)
 
-    // Reset sequence number
-    this.send('\x01', this.control)
-    this.packet_counter = 0
+    // send Reset sequence number or Network change command
+    if(this.remoteSerial) {
+      let buffer = Buffer.from([0x00, 0x38, 0xFF])
+      buffer.writeUInt8(this.id, 0)
+      self.send('y0 38 FF')
+    } else {
+      this.send('\x01', this.control)
+      this.packet_counter = 0
+    }
+    
 
     this.udp.on('error', (err) => {
       self.updateStatus(InstanceStatus.ConnectionFailure, err.message)
@@ -88,6 +95,7 @@ export class ViscaOIP {
       if (!this.remoteSerial) {
         type = data.subarray(0,2)
         data = data.subarray(8)
+        data.writeUInt8(this.id, 0)
       }
       self.send(data, type)
     })
@@ -106,6 +114,7 @@ export class ViscaOIP {
     
 	  if (!this.remoteSerial) {
 	    type = type || this.findType(payload)
+	    type.copy(buffer)
 
   		if (this.packet_counter == 0xffffffff) {
   		  this.send('\x01', this.control)
