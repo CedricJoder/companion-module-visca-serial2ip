@@ -1,5 +1,6 @@
 import { UDPHelper } from '@companion-module/base'
 import { SerialPort } from 'serialport'
+import { InstanceStatus } from '@companion-module/base'
 
 
 let self
