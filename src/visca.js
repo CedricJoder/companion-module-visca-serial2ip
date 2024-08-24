@@ -122,7 +122,7 @@ export class ViscaOIP {
     this.udp.on('listening', () => {
       self.log('info', 'UDP listening')
       self.updateStatus(InstanceStatus.Ok)
-      self.setAddress()
+      self.setAddress(1)
     })
 
     this.udp.on('status_change', (status, message) => {
@@ -271,7 +271,7 @@ export class ViscaSerial {
 		  
 		  // address_set message
       if (data.subarray(0,1) == this.address_set.subarray(0,1)) {
-        self.setAddress()
+        self.setAddress(data.readUInt8(2))
         return 
       }
 			self.send(data)
