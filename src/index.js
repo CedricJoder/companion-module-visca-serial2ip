@@ -58,7 +58,6 @@ class Visca2IpInstance extends InstanceBase {
 		this.devMode = process.env.DEVELOPER
 		
 		this.viscaOIP = []
-		this.viscaSerial = undefined
 	}
 
 	/**
@@ -138,6 +137,7 @@ class Visca2IpInstance extends InstanceBase {
 		this.IPPort = config.iport || 52381
 		this.sPortPath = config.sport || 'none'
 		this.tSockets = []
+		this.viscaOIP = []
 		for (let i = config.firstID; i < (config.firstID + config.devicesNumber); i++) {
 		  this.viscaOIP[i] = new ViscaOIP(this, i)
 		}
