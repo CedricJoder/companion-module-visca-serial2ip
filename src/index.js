@@ -710,7 +710,7 @@ class Visca2IpInstance extends InstanceBase {
 	    })
       this.viscaSerial.send(msg)
 	  }
-	  else if ((typeof this.viscaOIP[receiver]) != undefined) {
+	  else if (this.viscaOIP[receiver]) {
 	    this.viscaOIP[receiver].send(msg, type)
 	  }
 	  else {
