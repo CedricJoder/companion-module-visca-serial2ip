@@ -47,7 +47,7 @@ class Visca2IpInstance extends InstanceBase {
 
 		// Wait a few seconds so we don't spam log with 'no ports/unconfigured'
 		// as those processes take a few moments to settle
-		this.LOG_DELAY = 10000
+//		this.LOG_DELAY = 10000
 
 		// module defaults
 		this.foundPorts = []
@@ -93,7 +93,7 @@ class Visca2IpInstance extends InstanceBase {
 		
 		if (this.viscaOIP) {
 		  this.viscaOIP.forEach((visca) => visca.destroy())
-		  delete this.viscaOIP
+		  this.viscaOIP = []
 		}
 		if (this.viscaSerial) {
 		  this.viscaSerial.destroy()
