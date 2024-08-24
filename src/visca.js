@@ -7,8 +7,16 @@ let self
 const COMMAND = Buffer.from([0x01, 0x00])
 const CONTROL = Buffer.from([0x02, 0x00])
 const INQUIRY = Buffer.from([0x01, 0x10])
+const DEVICE_SETTING = Buffer.from([0x01, 0x20])
+const REPLY = Buffer.from([0x01, 0x11])
+const CONTROL_REPLY = Buffer.from([0x02, 0x01])
+
 const NETWORK_CHANGE = Buffer.from([0x00, 0x38, 0xFF])
 const RESET_COUNTER = Buffer.from([0x01])
+const IF_CLEAR = Buffer.from([0x01, 0x00, 0x01, 0xFF])
+const BROADCAST = Buffer.from([0x88])
+
+
 
 function msgToString(msg, separateBlocks = true) {
 		let s = ''
@@ -42,11 +50,27 @@ export class ViscaOIP {
 	get inquiry() {
 		return INQUIRY
 	}
+	get reply() {
+	  return REPLY
+	}
+	get control_reply() {
+    return CONTROL_REPLY
+  }
+  get device_setting() {
+    return DEVICE_SETTING
+  }
+	
 	get network_change() {
 	  return NETWORK_CHANGE
 	}
 	get reset_counter() {
 	  return RESET_COUNTER
+	}
+	get if_clear() {
+	  return IF_CLEAR
+	}
+	get broadcast() {
+	  return BROADCAST
 	}
 	
 	
@@ -103,12 +127,18 @@ export class ViscaOIP {
     this.udp.on('message', (data) => {
       let type
       if (!this.remoteSerial) {
+        // remove ip header and set sender id
         type = data.subarray(0,2)
         data = data.subarray(8)
         let header = data.readUInt8(0)
         header = (this.id+8)*16+ (header%16)
         data.writeUInt8(header, 0)
       }
+      // filter broadcast if_clear to prevent loops
+      if ((data.subarray(1) == this.if_clear) && (data.subarray(0,1) == this.broadcast)) {
+        return
+      }
+      
       self.send(data, type)
     })
   }
@@ -168,13 +198,27 @@ export class ViscaOIP {
 	
 	// finding the type of udp message 
 	findType(msg) {
-	  
+	  if (msg.subarray(1) == this.if_clear){
+	    return this.device_setting
+	  }
 	  return this.command
 	}
 }
 
 
 export class ViscaSerial {
+  
+  get network_change() {
+    return NETWORK_CHANGE
+  }
+  get if_clear() {
+    return IF_CLEAR
+  }
+  get broadcast() {
+    return BROADCAST
+  }
+
+
 	constructor(_self) {
 		self = _self
 	}
