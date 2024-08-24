@@ -65,7 +65,8 @@ export class ViscaOIP {
     // send Reset sequence number or Network change command
     if(this.remoteSerial) {
       let buffer = Buffer.from([0x00, 0x38, 0xFF])
-      buffer.writeUInt8(this.id, 0)
+      let header = (this.id+8)*16
+      buffer.writeUInt8(header, 0)
       self.send(buffer)
     } else {
       this.send('\x01', this.control)
@@ -95,7 +96,9 @@ export class ViscaOIP {
       if (!this.remoteSerial) {
         type = data.subarray(0,2)
         data = data.subarray(8)
-        data.writeUInt8(this.id, 0)
+        let header = data.readUInt8(0)
+        header = (this.id+8)*16+ (header%16)
+        data.writeUInt8(header, 0)
       }
       self.send(data, type)
     })
