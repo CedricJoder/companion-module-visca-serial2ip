@@ -699,8 +699,11 @@ class Visca2IpInstance extends InstanceBase {
 	  let header
 	  if (typeof msg == 'string') {
       header = parseInt(msg[0],16)
-    } else if (typeof onmsgestureend == 'object' && msgestureend instanceof Buffer) {
+    } else if (typeof msg == 'object' && msg instanceof Buffer) {
       header = msg.readUInt8(0)
+    } else {
+      this.log('error', "can't sent message")
+      return
     }
 	  let receiver = header%16
 	  this.log('debug', 'receiver : '+ receiver)
