@@ -145,11 +145,6 @@ export class ViscaOIP {
         return
       }
       
-      // set_address message
-      if (data.subarray(0,1) == this.address_set.subarray(0,1)) {
-        self.setAddress()
-        return 
-      }
       
       self.send(data, type)
     })
@@ -270,6 +265,12 @@ export class ViscaSerial {
 		})
 
 		this.sPort.on('data', (data) => {
+		  
+		  // address_set message
+      if (data.subarray(0,1) == this.address_set.subarray(0,1)) {
+        self.setAddress()
+        return 
+      }
 			self.send(data)
 		})
 
