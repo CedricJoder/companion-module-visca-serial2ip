@@ -66,7 +66,7 @@ export class ViscaOIP {
     if(this.remoteSerial) {
       let buffer = Buffer.from([0x00, 0x38, 0xFF])
       buffer.writeUInt8(this.id, 0)
-      self.send('y0 38 FF')
+      self.send(buffer)
     } else {
       this.send('\x01', this.control)
       this.packet_counter = 0
