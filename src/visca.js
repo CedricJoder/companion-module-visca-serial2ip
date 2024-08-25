@@ -38,7 +38,7 @@ export class ViscaOIP {
 		this.id = id
 		this.ip = self.config['ip'+id]
 		this.port = self.config['port'+id]
-		this.remoteSerial = self.config['remoteSerial'+id]
+		this.remoteSerial = self.config['protocol'+id]=='serial'
 		this.packet_counter = 0
 		
 		this.init()

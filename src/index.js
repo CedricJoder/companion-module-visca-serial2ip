@@ -672,12 +672,19 @@ class Visca2IpInstance extends InstanceBase {
 		   		isVisibleData: {"i" : i}
 		    },
 		    {
-		      type: 'checkbox',
-		      id: 'remoteSerial' + i,
-		      label: 'Device ' + i + ' remote serial',
-		      tooltip: 'Check if device number ' + i + ' is controlled by serial Visca on a remote IP machine',
-		      default: false,
-		      width: 3,
+		      type: 'dropdown',
+		      id: 'protocol' + i,
+		      label: 'Device ' + i + ' protocol',
+		      tooltip: 'Select the correct protocol to control device number ' + i,
+		      default: 'udp',
+		      width: 4,
+		      choices : [{
+		        id: 'udp',
+		        label: 'Visca over IP'
+		      }, {
+		        id: 'serial',
+		        label: 'Visca over serial'
+		      }],
 		      isVisible: (options, data) => {
 		    	  return (data.i >= options.firstID) && (data.i < (options.firstID + options.devicesNumber));},
 		   		isVisibleData: {"i" : i}
