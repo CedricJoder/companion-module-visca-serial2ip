@@ -36,6 +36,7 @@ export class ViscaOIP {
 	constructor(_self, id) {
 		self = _self
 		this.id = id
+		this.protocol = self.config['protocol'+id]
 		this.ip = self.config['ip'+id]
 		this.port = self.config['port'+id]
 		this.remoteSerial = self.config['protocol'+id]=='serial'
