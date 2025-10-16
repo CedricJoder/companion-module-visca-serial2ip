@@ -31,12 +31,12 @@ export interface TCPHelperEvents {
 //}
 
 export class TCPServer extends EventEmitter<TCPHelperEvents> {
-	readonly #host: string
+	readonly #host: string | undefined
 	readonly #port: number
 	readonly _server: net.Server 
-	readonly #options: Required<TCPHelperOptions>
+//	readonly #options: Required<TCPHelperOptions>
 	
-	#clients: Array<net.Socket>
+	#clients: Array<net.Socket> = []
 
 	#connected = false
 	#listening = false
@@ -84,7 +84,7 @@ export class TCPServer extends EventEmitter<TCPHelperEvents> {
 		
 		this._server.on('connection', (socket) => {
 			self.#connected = true;
-			self.#new_status(InstanceStatus.Connected);
+			self.#new_status(InstanceStatus.Ok);
 			
 			self.#clients.push(socket);
 			socket.setKeepAlive(true, 10000)
@@ -94,8 +94,8 @@ export class TCPServer extends EventEmitter<TCPHelperEvents> {
 			})
 
 			socket.on('close', () => {
-				self.#clients.splice(self.clients.indexOf(socket), 1)
-				self.#connected = self.clients.length > 0
+				self.#clients.splice(self.#clients.indexOf(socket), 1)
+				self.#connected = self.#clients.length > 0
 				if (!self.#connected) {
 					self.#new_status(InstanceStatus.Disconnected);
 				}
@@ -116,12 +116,12 @@ export class TCPServer extends EventEmitter<TCPHelperEvents> {
 
 		this._server.on('data', (data) => this.emit('data', data))
 		
-		this._server.on('drop', () => this.emit('drop'))
+//		this._server.on('drop', () => this.emit('drop'))
 
 		// Let caller install event handlers first
-		setImmediate(() => {
-			if (!this.#destroyed) this.connect()
-		})
+//		setImmediate(() => {
+//			if (!this.#destroyed) this.connect()
+//		})
 
 		this.#missingErrorHandlerTimer = setTimeout(() => {
 			this.#missingErrorHandlerTimer = undefined
