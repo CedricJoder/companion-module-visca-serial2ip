@@ -1,7 +1,15 @@
 import net from 'net'
 import { EventEmitter } from 'eventemitter3'
 //import { InstanceStatus } from '../module-api/enums.js'
-import { TCPHelperEvents, TCPHelperOptions, InstanceStatus} from '@companion-module/base'
+import { TCPHelperEvents, //TCPHelperOptions, 
+InstanceStatus} from '@companion-module/base'
+
+
+type TCPStatuses =
+	| InstanceStatus.Ok
+	| InstanceStatus.Connecting
+	| InstanceStatus.Disconnected
+	| InstanceStatus.UnknownError
 
 
 /*
@@ -187,7 +195,7 @@ export class TCPServer extends EventEmitter<TCPHelperEvents> {
 	}
 
 	// Private function
-	#new_status(status: InstanceStatus, message?: string): void {
+	#new_status(status: TCPStatuses, message?: string): void {
 		if (this.#lastStatus != status) {
 			this.#lastStatus = status
 			this.emit('status_change', status, message)
