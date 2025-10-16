@@ -1,24 +1,10 @@
-import { UDPHelper } from '@companion-module/base'
+import { UDPHelper, TCPHelper } from '@companion-module/base'
 import { SerialPort } from 'serialport'
 import { InstanceStatus } from '@companion-module/base'
+import * as COMMANDS from './ViscaCommands.js'
 
 
 let self
-const COMMAND = Buffer.from([0x01, 0x00])
-const CONTROL = Buffer.from([0x02, 0x00])
-const INQUIRY = Buffer.from([0x01, 0x10])
-const DEVICE_SETTING = Buffer.from([0x01, 0x20])
-const REPLY = Buffer.from([0x01, 0x11])
-const CONTROL_REPLY = Buffer.from([0x02, 0x01])
-
-const NETWORK_CHANGE = Buffer.from([0x00, 0x38, 0xFF])
-const RESET_COUNTER = Buffer.from([0x01])
-const IF_CLEAR = Buffer.from([0x01, 0x00, 0x01, 0xFF])
-const ADDRESS_SET = Buffer.from [0x88, 0x30, 0x00, 0xFF]
-
-
-const BROADCAST = Buffer.from([0x88])
-
 
 
 function msgToString(msg, separateBlocks = true) {
@@ -33,71 +19,91 @@ function msgToString(msg, separateBlocks = true) {
 	}
 
 export class ViscaOIP {
-	constructor(_self, id) {
-		self = _self
-		this.id = id
-		this.ip = self.config['ip'+id]
-		this.port = self.config['port'+id]
-		this.remoteSerial = self.config['protocol'+id]=='serial'
-		this.packet_counter = 0
+	constructor(routerModule, linkId) {
+		self = routerModule
+		this.linkId = linkId
+		this.transportProtocol = self.config['transportProtocol' + linkId];
+		this.ip = self.config['ip'+linkId]
+		this.port = self.config['port'+linkId] || '0.0.0.0'
+//		this.IPprotocol = self.config['IPprotocol'+linkId]
+//		this.role = self.config['role'+id]
+
+		this.bauds = self.config['baud'+linkId];
+		this.bits = self.config['bits'+linkId];
+		this.parity = self.config['parity'+linkId];
+		this.stop = self.config['stop'+linkId];
+
+		this.viscaProtocol = self.config['viscaProtocol'+linkId]
+		this.viscaIds = self.config['ids'+linkId]?.split(",");
+		this.packet_counter = 0;
 		
-		this.init()
+		this.route = (msg) => {
+			self.route(msg);
+		};
+		
+		this.init();
 	}
 
 	get command() {
-		return COMMAND
+		return COMMANDS.COMMAND
 	}
 	get control() {
-		return CONTROL
+		return COMMANDS.CONTROL
 	}
 	get inquiry() {
-		return INQUIRY
+		return COMMANDS.INQUIRY
 	}
 	get reply() {
-	  return REPLY
+	  return COMMANDS.REPLY
 	}
 	get control_reply() {
-    return CONTROL_REPLY
+    return COMMANDS.CONTROL_REPLY
   }
   get device_setting() {
-    return DEVICE_SETTING
+    return COMMANDS.DEVICE_SETTING
   }
 	
 	get network_change() {
-	  return NETWORK_CHANGE
+	  return COMMANDS.NETWORK_CHANGE
 	}
 	get reset_counter() {
-	  return RESET_COUNTER
+	  return COMMANDS.RESET_COUNTER
 	}
 	get if_clear() {
-	  return IF_CLEAR
+	  return COMMANDS.IF_CLEAR
 	}
 	get address_set() {
-	  return ADDRESS_SET
+	  return COMMANDS.ADDRESS_SET
 	}
 	get broadcast() {
-	  return BROADCAST
+	  return COMMANDS.BROADCAST
 	}
 	
 	
 	destroy() {
-	  if (this.udp) {
-      this.udp.destroy()
-      delete this.udp
-      this.updateStatus(InstanceStatus.Disconnected)
+	  if (this.socket) {
+      this.socket.destroy()
+      delete this.socket
+    //  self.updateStatus(InstanceStatus.Disconnected)
     }
 	}
 	
 	
 	init() {
 	  // clear before initializing 
-    if (this.udp) {
-      this.udp.destroy()
-      delete this.udp
-      this.updateStatus(InstanceStatus.Disconnected)
-    }
+	  this.destroy()
 
     self.updateStatus(InstanceStatus.Connecting)
+    
+    switch (this.IPprotocol) {
+      case 'udpServer':
+        // create udp socket
+        
+        break;
+      
+      default:
+        // Tab to edit
+    }
 
     this.udp = new UDPHelper(this.ip,this.port)
 

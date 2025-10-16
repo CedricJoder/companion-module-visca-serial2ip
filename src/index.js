@@ -673,17 +673,17 @@ class Visca2IpInstance extends InstanceBase {
 		    },
 		    {
 		      type: 'dropdown',
-		      id: 'protocol' + i,
+		      id: 'IPprotocol' + i,
 		      label: 'Device ' + i + ' protocol',
-		      tooltip: 'Select the correct protocol to control device number ' + i,
+		      tooltip: 'Select the correct IP protocol to control device number ' + i,
 		      default: 'udp',
 		      width: 4,
 		      choices : [{
 		        id: 'udp',
-		        label: 'Visca over IP'
+		        label: 'UDP'
 		      }, {
-		        id: 'serial',
-		        label: 'Visca over serial'
+		        id: 'tcp',
+		        label: 'TCP'
 		      }],
 		      isVisible: (options, data) => {
 		    	  return (data.i >= options.firstID) && (data.i < (options.firstID + options.devicesNumber));},
