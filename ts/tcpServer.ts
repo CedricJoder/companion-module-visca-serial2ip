@@ -34,7 +34,7 @@ export class TCPServer extends EventEmitter<TCPHelperEvents> {
 	readonly #host: string | undefined
 	readonly #port: number
 	readonly _server: net.Server 
-//	readonly #options: Required<TCPHelperOptions>
+	readonly #options: Required<TCPHelperOptions>
 	
 	#clients: Array<net.Socket> = []
 
@@ -134,7 +134,8 @@ export class TCPServer extends EventEmitter<TCPHelperEvents> {
 
 	
 	async send(message: string | Buffer): Promise<boolean> {
-		if (this.#destroyed || this._socket.destroyed) throw new Error('Cannot write to destroyed socket')
+	  let self : TCPServer = this
+		if (this.#destroyed ) throw new Error('Cannot write to destroyed socket')
 		if (!message || !message.length) throw new Error('No message to send')
 
 		if (!this.#connected) {
@@ -177,10 +178,12 @@ export class TCPServer extends EventEmitter<TCPHelperEvents> {
 			clearTimeout(this.#missingErrorHandlerTimer)
 			this.#missingErrorHandlerTimer = undefined
 		}
-
-		this._socket.removeAllListeners()
-		this.removeAllListeners()
-		this._socket.destroy()
+		
+		for (var sock of this.#clients) {
+  		this.sock.removeAllListeners()
+  		this.removeAllListeners()
+  		this.sock.destroy()
+  	}
 	}
 
 	// Private function
