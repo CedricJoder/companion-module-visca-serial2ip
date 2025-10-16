@@ -1,7 +1,7 @@
 import net from 'net'
 import { EventEmitter } from 'eventemitter3'
 //import { InstanceStatus } from '../module-api/enums.js'
-import { TCPHelperEvents, TCPHelperOptions, InstanceStatus} from '@companion-module/base'
+import { TCPHelperEvents, TCPHelperOptions, InstanceStatus, TCPStatuses} from '@companion-module/base'
 
 
 /*
@@ -34,7 +34,7 @@ export class TCPServer extends EventEmitter<TCPHelperEvents> {
 	readonly #host: string | undefined
 	readonly #port: number
 	readonly _server: net.Server 
-	readonly #options: Required<TCPHelperOptions>
+//	readonly #options: Required<TCPHelperOptions>
 	
 	#clients: Array<net.Socket> = []
 
@@ -61,11 +61,11 @@ export class TCPServer extends EventEmitter<TCPHelperEvents> {
 		let self: TCPServer = this;
 		this.#host = host
 		this.#port = port
-		this.#options = {
-			reconnect_interval: 2000,
-			reconnect: true,
-			...options,
-		}
+//		this.#options = {
+//			reconnect_interval: 2000,
+//			reconnect: true,
+//			...options,
+//		}
 
 		this._server = new net.Server()
 
@@ -180,9 +180,9 @@ export class TCPServer extends EventEmitter<TCPHelperEvents> {
 		}
 		
 		for (var sock of this.#clients) {
-  		this.sock.removeAllListeners()
+  		sock.removeAllListeners()
   		this.removeAllListeners()
-  		this.sock.destroy()
+  		sock.destroy()
   	}
 	}
 
