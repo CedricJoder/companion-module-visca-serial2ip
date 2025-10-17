@@ -4,7 +4,6 @@ import { InstanceStatus } from '@companion-module/base'
 import * as COMMANDS from './ViscaCommands.js'
 
 
-let self
 
 
 function msgToString(msg, separateBlocks = true) {
@@ -20,25 +19,23 @@ function msgToString(msg, separateBlocks = true) {
 
 export class ViscaOIP {
 	constructor(routerModule, linkId) {
-		self = routerModule
+		this.module = routerModule
 		this.linkId = linkId
-		this.transportProtocol = self.config['transportProtocol' + linkId];
-		this.ip = self.config['ip'+linkId]
-		this.port = self.config['port'+linkId] || '0.0.0.0'
-//		this.IPprotocol = self.config['IPprotocol'+linkId]
-//		this.role = self.config['role'+id]
+		this.IPProtocol = routerModule.config['IPProtocol' + linkId];
+		this.ip = routerModule.config['ip'+linkId]
+		this.port = routerModule.config['port'+linkId] || '0.0.0.0'
 
-		this.bauds = self.config['baud'+linkId];
-		this.bits = self.config['bits'+linkId];
-		this.parity = self.config['parity'+linkId];
-		this.stop = self.config['stop'+linkId];
+		this.bauds = routerModule.config['baud'+linkId];
+		this.bits = routerModule.config['bits'+linkId];
+		this.parity = routerModule.config['parity'+linkId];
+		this.stop = routerModule.config['stop'+linkId];
 
-		this.viscaProtocol = self.config['viscaProtocol'+linkId]
-		this.viscaIds = self.config['ids'+linkId]?.split(",");
+		this.viscaProtocol = routerModule.config['viscaProtocol'+linkId]
+		this.viscaIds = routerModule.config['ids'+linkId]?.split(",");
 		this.packet_counter = 0;
 		
 		this.route = (msg) => {
-			self.route(msg);
+			routerModule.route(msg);
 		};
 		
 		this.init();
@@ -84,7 +81,7 @@ export class ViscaOIP {
 	  if (this.socket) {
       this.socket.destroy()
       delete this.socket
-    //  self.updateStatus(InstanceStatus.Disconnected)
+    //  this.module.updateStatus(InstanceStatus.Disconnected)
     }
 	}
 	
@@ -93,7 +90,7 @@ export class ViscaOIP {
 	  // clear before initializing 
 	  this.destroy()
 
-    self.updateStatus(InstanceStatus.Connecting)
+    //this.module.updateStatus(InstanceStatus.Connecting)
     
     switch (this.IPprotocol) {
       case 'udpServer':
@@ -112,7 +109,7 @@ export class ViscaOIP {
       let buffer = Buffer.from(this.network_change)
       let header = (this.id+8)*16
       buffer.writeUInt8(header, 0)
-      self.send(buffer)
+      this.route(buffer)
     } else {
       this.send(this.reset_counter, this.control)
       this.packet_counter = 0
@@ -120,20 +117,20 @@ export class ViscaOIP {
     
 
     this.udp.on('error', (err) => {
-      self.updateStatus(InstanceStatus.ConnectionFailure, err.message)
-      self.log('error', 'Network error: ' + err.message)
+      this.module.updateStatus(InstanceStatus.ConnectionFailure, err.message)
+      this.module.log('error', 'Network error: ' + err.message)
     })
 
     // If the status is 'listening', connection should be established
     this.udp.on('listening', () => {
-      self.log('info', 'UDP listening')
-      self.updateStatus(InstanceStatus.Ok)
-      self.setAddress(1)
+      this.module.log('info', 'UDP listening')
+      this.module.updateStatus(InstanceStatus.Ok)
+      this.module.setAddress(1)
     })
 
     this.udp.on('status_change', (status, message) => {
-      self.log('debug', 'UDP status_change: ' + status)
-      self.updateStatus(status, message)
+      this.module.log('debug', 'UDP status_change: ' + status)
+      this.module.updateStatus(status, message)
     })
     
     // on data receive, parsing and forwarding to the main module for routing
@@ -153,7 +150,7 @@ export class ViscaOIP {
       }
       
       
-      self.send(data, type)
+      this.module.send(data, type)
     })
     
     
@@ -161,6 +158,10 @@ export class ViscaOIP {
 	
   // send message through the udp interface
 	send(payload, type) {
+//	  if (payload == undefined) {
+//		return
+//	  }
+	  
 	  let headerSize = (this.remoteSerial) ? 0 : 8
 	  const buffer = Buffer.alloc(payload.length + headerSize)
 	    
@@ -189,13 +190,13 @@ export class ViscaOIP {
   		this.packet_counter = this.packet_counter + 1
     }
     
-    if (self && self.config && self.config.verbose){
-	  self.log('debug', this.msgToString(buffer))
+    if (this.module && this.module.config && this.module.config.verbose){
+	  this.module.log('debug', this.msgToString(buffer))
     }
     
     this.lastCmdSent = buffer
 		let lastCmdSent = this.msgToString(buffer.slice(8), false)
-		self.setVariableValues({ lastCmdSent: lastCmdSent })
+		this.module.setVariableValues({ lastCmdSent: lastCmdSent })
 		this.udp.send(buffer)
 	}
 
@@ -236,7 +237,7 @@ export class ViscaSerial {
 
 
 	constructor(_self) {
-		self = _self
+		let self = _self
 	}
 		/**
 	 * Initialize the serial port and attach for read/write

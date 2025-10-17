@@ -47,11 +47,13 @@ class Visca2IpInstance extends InstanceBase {
 	constructor(internal) {
 		super(internal)
 
+		this.log('debug', 'constructor')
 		// Wait a few seconds so we don't spam log with 'no ports/unconfigured'
 		// as those processes take a few moments to settle
 //		this.LOG_DELAY = 10000
 
 		// module defaults
+		this.linkNumber = 2
 		this.foundPorts = []
 		this.tSockets = []
 		this.sPortPath = 'none'
@@ -60,6 +62,8 @@ class Visca2IpInstance extends InstanceBase {
 		this.devMode = process.env.DEVELOPER
 		
 		this.viscaOIP = []
+		
+		this.log('debug', 'constructor')
 	}
 
 	/**
@@ -135,6 +139,7 @@ class Visca2IpInstance extends InstanceBase {
 	applyConfig(config) {
 		this.config = config
 		this.clearAll()
+		this.linkNumber = config.linkNumber || 2
 		this.isListening = false
 		this.IPPort = config.iport || 52381
 		this.sPortPath = config.sport || 'none'
@@ -495,8 +500,16 @@ class Visca2IpInstance extends InstanceBase {
 				id: 'info',
 				width: 12,
 				label: 'Information',
-				value: 'This is a helper module to convert Visca over serial commands to Visco over IP',
+				value: 'This module is meant to route visca commands over multiple links, either IP or serial',
 			},
+			{
+				type: 'number',
+				id: 'linkNumber',
+				width: 6,
+				label: 'Number of visca links',
+				default: 2,
+			},
+			
 			{
 				type: 'textinput',
 				id: 'iport',
@@ -528,7 +541,7 @@ class Visca2IpInstance extends InstanceBase {
 				if (!portObj) {
 					if (this.config.selectfirstfound) {
 						this.log('info', 'Previously selected port (' + this.config.sport + ') not found.')
-						if (this.ports.length > 1) {
+						if (this.ports?.length > 1) {
 							this.log('info', 'Selecting first found port: ' + ports[1].id)
 							this.config.sport = ports[1].id
 						}
@@ -537,7 +550,8 @@ class Visca2IpInstance extends InstanceBase {
 			} else {
 				ports = [{ id: 'none', label: 'No serial ports detected' }]
 			}
-  
+			
+ 
 			fields.push(
 				{
 					type: 'dropdown',
@@ -691,6 +705,108 @@ class Visca2IpInstance extends InstanceBase {
 		    }
 		  )
 		}	  
+		
+		for (let i = 1; i <= this.config.linkNumber; i++){
+			fields.push({
+				type: 'static-text',
+				id: 'spacer',
+				width: 12,
+				label: '   '
+				//value: 'Config for link ' + i,
+			},
+			{
+				type: 'static-text',
+				id: 'info'+i,
+				width: 12,
+				label: 'Config for link ' + i
+				//value: 'Config for link ' + i,
+			},
+			{
+				type: 'dropdown',
+				id: 'linkType' + i,
+				label: 'Link Type',
+				width: 4,
+				choices: CHOICES.LINK_TYPE,
+				default: CHOICES.LINK_TYPE[0].id
+			},
+			{
+				type: 'dropdown',
+				id: 'sPort' + i,
+				label: 'Serial port used',
+				width: 6,
+				choices: ports,
+				default: ports[ports.length==1 ? 0 : 1].id,
+				isVisible: (options, data) => {
+		    	  return (options['linkType' + data.i] == 'SERIAL')},
+		   		isVisibleData: {"i" : i}
+			},
+			{
+				type: 'dropdown',
+				id: 'baud' + i,
+				label: 'Baud Rate',
+				width: 3,
+				default: CHOICES.BAUD_RATES[0].id,
+				choices: CHOICES.BAUD_RATES,
+				isVisible: (options, data) => {
+		    	  return (options['linkType' + data.i] == 'SERIAL')},
+		   		isVisibleData: {"i" : i}
+			},
+			{
+				type: 'dropdown',
+				id: 'bits' + i,
+				label: 'Data Bits',
+				width: 3,
+				value: CHOICES.BITS[0].id,
+				choices: CHOICES.BITS,
+				isVisible: (options, data) => {
+		    	  return (options['linkType' + data.i] == 'SERIAL')},
+		   		isVisibleData: {"i" : i}
+			},
+			{
+				type: 'dropdown',
+				id: 'parity' + i,
+				label: 'Parity',
+				width: 3,
+				value: CHOICES.PARITY[0].id,
+				choices: CHOICES.PARITY,
+				isVisible: (options, data) => {
+		    	  return (options['linkType' + data.i] == 'SERIAL')},
+		   		isVisibleData: {"i" : i}
+			},
+			{
+				type: 'dropdown',
+				id: 'stop' + i,
+				label: 'Stop Bits',
+				width: 3,
+				value: CHOICES.STOP[0].id,
+				choices: CHOICES.STOP,
+				isVisible: (options, data) => {
+		    	  return (options['linkType' + data.i] == 'SERIAL')},
+		   		isVisibleData: {"i" : i}
+			},
+			
+			{
+				type: 'textinput',
+				id: 'IP' + i,
+				label: 'IP address',
+				width: 4, 
+				regex: Regex.IP,
+				isVisible: (options, data) => {
+		    	  return (options['linkType' + data.i] == 'IP')},
+		   		isVisibleData: {"i" : i}	
+			},
+			{
+				type: 'textinput',
+				id: 'IPPort' + i,
+				label: 'Port',
+				width: 4,
+				regex: Regex.PORT,
+				isVisible: (options, data) => {
+		    	  return (options['linkType' + data.i] == 'IP')},
+		   		isVisibleData: {"i" : i}
+			}
+		)}
+			
 	 fields.push(
 	    {
 		    type: 'checkbox',
