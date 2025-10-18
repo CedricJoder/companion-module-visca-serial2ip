@@ -1,5 +1,5 @@
 // serial port configuration choices
-export const LINK_TYPE = ['SERIAL', 'IP'].map((v) => {
+export const LINK_TYPE = ['SERIAL', 'UDP', 'TCP_SERVER', 'TCP_CLIENT'].map((v) => {
 	return {id: v, label:v}
 })
 

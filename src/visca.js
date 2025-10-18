@@ -1,4 +1,5 @@
 import { UDPHelper, TCPHelper } from '@companion-module/base'
+import { TCPServer }  from './tcpServer.js'
 import { SerialPort } from 'serialport'
 import { InstanceStatus } from '@companion-module/base'
 import * as COMMANDS from './ViscaCommands.js'
@@ -16,6 +17,229 @@ function msgToString(msg, separateBlocks = true) {
 		}
 		return s.trim()
 	}
+	
+	
+export class ViscaNetwork {
+
+	get command() {
+		return COMMANDS.COMMAND
+	}
+	get control() {
+		return COMMANDS.CONTROL
+	}
+	get inquiry() {
+		return COMMANDS.INQUIRY
+	}
+	get reply() {
+	  return COMMANDS.REPLY
+	}
+	get control_reply() {
+    return COMMANDS.CONTROL_REPLY
+	}
+	get device_setting() {
+    return COMMANDS.DEVICE_SETTING
+	}
+	
+	get network_change() {
+	  return COMMANDS.NETWORK_CHANGE
+	}
+	get reset_counter() {
+	  return COMMANDS.RESET_COUNTER
+	}
+	get if_clear() {
+	  return COMMANDS.IF_CLEAR
+	}
+	get cam_version_inq() {
+		return COMMANDS.CAM_VERSION_INQ
+	}
+	get address_set() {
+	  return COMMANDS.ADDRESS_SET
+	}
+	get broadcast() {
+	  return COMMANDS.BROADCAST
+	}
+	
+	destroy() {
+		if (this.socket) {
+		this.socket.destroy()
+		delete this.socket
+		this.module.updateStatus(InstanceStatus.Disconnected)
+		}
+	}
+	
+	
+	constructor (routerModule, linkId) {
+		this.module = routerModule
+		this.linkId = linkId
+		this.linkType = routerModule.config['linkType' + linkId]
+		this.viscaProtocol = routerModule.config['viscaProtocol'+linkId]
+		this.viscaIds = routerModule.config['ids'+linkId]?.split(",");
+		
+		this.IP = routerModule.config['ip'+linkId]
+		
+		switch (this.linkType) {
+			case 'SERIAL':
+				this.sPort = routerModule.config['sPort' + linkId]
+				this.bauds = routerModule.config['baud'+linkId]
+				this.bits = routerModule.config['bits'+linkId]
+				this.parity = routerModule.config['parity'+linkId]
+				this.stop = routerModule.config['stop'+linkId]
+				break
+				
+			case 'UDP': 
+				this.IP = routerModule.config['IP' + linkId]
+				this.IPPort = routerModule.config['IPPort' + linkId]
+				this.localPort = routerModule.config['localPort' + linkId]
+				break
+				
+			case 'TCP_CLIENT':
+				this.IP = routerModule.config['IP' + linkId]
+				this.IPPort = routerModule.config['IPPort' + linkId]
+				break
+				
+			case 'TCP_Server':
+				this.IPPort = routerModule.config['IPPort' + linkId]
+		}
+		
+		if (this.viscaProtocol == 'IP') {
+			this.packet_counter = 0
+		}
+		
+		this.init()
+		
+		
+	}
+	
+	// finding the type of visca serial payload 
+	findPayloadType(msg) {
+		if ((msg.subarray(1) == this.if_clear) || (msg.subarray(1) == this.cam_version_inq)){
+			return this.device_setting
+		}
+		let secondBite = msg.subarray(1,2)
+		
+		if (secondBite == 0x01) {
+			return this.command
+		} else if (secondBite == 0x09) {
+			return this.inquiry
+		} else if ([0x40, 0x50, 0x60].includes(secondBite | 0x80)) {
+			return this.reply
+		}
+	}
+
+	
+	
+/**
+ * Send message through the interface
+ * @param {buffer || string} msg: message to send
+ * @param {string} type: Visca protocol of the message to send, either 'SERIAL' or 'IP'
+ * @since 1.0.0
+ */
+ 
+	send(msg, type) {
+	  if (msg == undefined || type == undefined) {
+		return
+	  }
+	  
+	  let data
+	  
+	  // format message
+	  if (this.viscaProtocol == 'SERIAL') {
+		if (type == 'SERIAL') {
+			data = Buffer.from(msg)
+		} else {
+			data = Buffer.from(msg.slice(8))
+			if (this.forceId) {
+				// force destination Id
+				let bufId = (data.readUint8(0) & ~0x08) | this.viscaIds[0]
+				data.writeUInt8(bufId, 0)
+			}
+		}
+	  } else {
+		if (type == 'IP') {
+			data = Buffer.from(msg)
+		} else {
+	
+			data = Buffer.alloc(msg.length + 8)
+			if (typeof msg == 'string') {
+				data.write(msg, 8, 'binary')
+			} else if (typeof msg == 'object' && msg instanceof Buffer) {
+				msg.copy(data, 8)
+			}
+			
+			// add header
+			let payloadType = this.findPayloadType(msg)
+			
+		  
+		  
+	  }
+		
+		
+		  
+		  
+	  let headerSize = (this.remoteSerial) ? 0 : 8
+	  const buffer = Buffer.alloc(msg.length + headerSize)
+	    
+	  if (typeof msg == 'string') {
+      buffer.write(msg, headerSize, 'binary')
+    } else if (typeof msg == 'object' && msg instanceof Buffer) {
+      msg.copy(buffer, headerSize)
+    }
+    
+	  if (!this.remoteSerial) {
+	    type = type || this.findType(msg)
+	    type.copy(buffer)
+
+  		if (this.packet_counter == 0xffffffff) {
+  		  this.send('\x01', this.control)
+	  		this.packet_counter = 0
+		  	// Reset sequence number
+//  			const resetBuffer = Buffer.alloc(9)
+	 // 		resetBuffer.write('020000010000000001', 'hex')
+//		  	this.udp.send(resetBuffer)
+  		}
+
+		  buffer.writeUInt16BE(msg.length, 2)
+  		buffer.writeUInt32BE(this.packet_counter, 4)
+  		
+  		this.packet_counter = this.packet_counter + 1
+    }
+    
+    if (this.module && this.module.config && this.module.config.verbose){
+	  this.module.log('debug', this.msgToString(buffer))
+    }
+    
+    this.lastCmdSent = buffer
+		let lastCmdSent = this.msgToString(buffer.slice(8), false)
+		this.module.setVariableValues({ lastCmdSent: lastCmdSent })
+		this.udp.send(buffer)
+	}
+	}
+
+  // message to human readable form for log
+	msgToString(msg, separateBlocks = true) {
+		let s = ''
+		for (let i = 0; i < msg.length; i++) {
+			s += msg[i].toString(16).padStart(2, '0') + ' '
+			if (separateBlocks && (i == 1 || i == 3 || i == 7 || i == 15 || i == 23)) {
+				s += '| '
+			}
+		}
+		return s.trim()
+	}
+	
+	
+	// finding the type of udp message 
+	findType(msg) {
+	  if (msg.subarray(1) == this.if_clear){
+	    return this.device_setting
+	  }
+	  return this.command
+	}
+}
+
+	
+	
+	
 
 export class ViscaOIP {
 	constructor(routerModule, linkId) {
@@ -55,10 +279,10 @@ export class ViscaOIP {
 	}
 	get control_reply() {
     return COMMANDS.CONTROL_REPLY
-  }
-  get device_setting() {
+	}
+	get device_setting() {
     return COMMANDS.DEVICE_SETTING
-  }
+	}
 	
 	get network_change() {
 	  return COMMANDS.NETWORK_CHANGE
