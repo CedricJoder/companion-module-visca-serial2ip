@@ -136,7 +136,7 @@ export class ViscaNetwork {
  */
  
 	send(msg, type) {
-	  if (msg == undefined || type == undefined) {
+	  if (msg == undefined || type == undefined || this.socket == undefined) {
 		return
 	  }
 	  
@@ -158,7 +158,7 @@ export class ViscaNetwork {
 		if (type == 'IP') {
 			data = Buffer.from(msg)
 		} else {
-	
+		// copy message 
 			data = Buffer.alloc(msg.length + 8)
 			if (typeof msg == 'string') {
 				data.write(msg, 8, 'binary')
@@ -168,9 +168,17 @@ export class ViscaNetwork {
 			
 			// add header
 			let payloadType = this.findPayloadType(msg)
-			
-		  
-		  
+			if (payloadType) {
+			  payloadType.copy(data, 0)
+			  data.writeUInt16BE(msg.length,2)
+			  data.writeUInt32BE(this.packet_counter, 4)
+			  this.packet_counter++
+			  
+			  if (this.module && this.module.config && this.module.config.verbose){
+			    this.module.log('debug', this.msgToString(buffer))
+			  }
+			  this.socket.send(data)
+			}
 	  }
 		
 		
