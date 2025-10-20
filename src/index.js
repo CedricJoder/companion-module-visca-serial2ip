@@ -55,13 +55,13 @@ class ViscaRouter extends InstanceBase {
 		// module defaults
 		this.linkNumber = 2
 		this.foundPorts = []
-		this.tSockets = []
-		this.sPortPath = 'none'
-		this.isOpen = false
-		this.IPPort = 52381
+		this.viscas = []
+//		this.sPortPath = 'none'
+//		this.isOpen = false
+//		this.IPPort = 52381
 		this.devMode = process.env.DEVELOPER
 		
-		this.viscaOIP = []
+//		this.viscaOIP = []
 		
 		this.log('debug', 'constructor')
 	}
@@ -75,36 +75,41 @@ class ViscaRouter extends InstanceBase {
 			clearInterval(this.portScan)
 			delete this.portScan
 		}
-		if (this.tSockets) {
-			this.tSockets.forEach((sock) => {
-				sock.end()
-				sock.removeAllListeners()
-			})
-			delete this.tSockets
-		}
-		if (this.tServer) {
-			if (this.tServer.connections > 0) {
-				this.tServer.close()
-			}
-			this.tServer.removeAllListeners()
-			delete this.tServer
-		}
-		if (this.sPort) {
-			this.sPort.removeAllListeners()
-			if (this.sPort.isOpen) {
-				this.sPort.close()
-			}
-			delete this.sPort
-		}
-		
-		if (this.viscaOIP) {
-		  this.viscaOIP.forEach((visca) => visca.destroy())
-		  this.viscaOIP = []
-		}
-		if (this.viscaSerial) {
-		  this.viscaSerial.destroy()
-		  delete this.viscaSerial
-		}
+//		if (this.sockets) {
+//			this.sockets.forEach((sock) => {
+//				sock.end()
+//				sock.removeAllListeners()
+//			})
+//			delete this.sockets
+//		}
+//		if (this.tServer) {
+//			if (this.tServer.connections > 0) {
+//				this.tServer.close()
+//			}
+//			this.tServer.removeAllListeners()
+//			delete this.tServer
+//		}
+//		if (this.sPort) {
+//			this.sPort.removeAllListeners()
+//			if (this.sPort.isOpen) {
+//				this.sPort.close()
+//			}
+//			delete this.sPort
+//		}
+//		
+//		if (this.viscaOIP) {
+//		  this.viscaOIP.forEach((visca) => visca.destroy())
+//		  this.viscaOIP = []
+//		}
+//		if (this.viscaSerial) {
+//		  this.viscaSerial.destroy()
+//		  delete this.viscaSerial
+//		}
+
+		this.viscas?.forEach((visca) => {
+			visca.destroy()
+			visca.removeAllListeners()
+		})
 	}
 
 	/**
@@ -140,15 +145,37 @@ class ViscaRouter extends InstanceBase {
 		this.config = config
 		this.clearAll()
 		this.linkNumber = config.linkNumber || 2
-		this.isListening = false
-		this.IPPort = config.iport || 52381
-		this.sPortPath = config.sport || 'none'
-		this.tSockets = []
-		this.viscaOIP = []
-		for (let i = config.firstID; i < (config.firstID + config.devicesNumber); i++) {
-		  this.viscaOIP[i] = new ViscaOIP(this, i)
+//		this.isListening = false
+//		this.IPPort = config.iport || 52381
+//		this.sPortPath = config.sport || 'none'
+//		this.tSockets = []
+//		this.viscaOIP = []
+//		for (let i = config.firstID; i < (config.firstID + config.devicesNumber); i++) {
+//		  this.viscaOIP[i] = new ViscaOIP(this, i)
+//		}
+//		this.isOpen = false
+
+		for (let i = 1; i <= this.linkNumber; i++) {
+			this['id'+i] = config['id'+i]
+			this['linkType'+i] = config['linkType'+i]
+			
+			if (this['linkType'+i] == 'SERIAL') {
+				this['sPort'+i] = config['sPort'+i]
+				this['baud'+i] = config['baud'+i]
+				this['bits'+i] = config['bits'+i]
+				this['parity'+i] = config['parity'+i]
+				this['stop'+i] = config['stop'+i]
+			} else {
+				this['IP'+i] = config['IP'+i]
+				this['IPPort'+i] = config['IPPort'+i]
+				this['localPort'+i] = config['localPort'+i]
+			}
+			
+			this.viscas[i] = new ViscaNetwork(this, i)
+
 		}
-		this.isOpen = false
+				
+
 		this.startedAt = Date.now()
 		this.portScan = setInterval(() => this.scanForPorts(), 5000)
 		this.scanForPorts()
@@ -171,51 +198,51 @@ class ViscaRouter extends InstanceBase {
 	 * Initialize the serial port and attach for read/write
 	 * @since 1.0.0
 	 */
-	init_serial() {
-		if (this.sPortPath == '' || this.sPortPath === 'none') {
-			// not configured yet
-			return
-		}
-
-		let portOptions = {
-			path: this.sPortPath,
-			autoOpen: false,
-			baudRate: parseInt(this.config.baud),
-			dataBits: parseInt(this.config.bits),
-			stopBits: parseInt(this.config.stop),
-			parity: this.config.parity,
-		}
-
-		this.sPort = new SerialPort(portOptions)
-
-		this.sPort.on('error', this.doUpdateStatus.bind(this))
-
-		this.sPort.on('open', this.init_tcp.bind(this))
-
-		this.sPort.on('close', (err) => {
-			this.doUpdateStatus(err)
-			if (err.disconnected) {
-				// close all connections
-				this.tSockets.forEach((sock) => sock.end())
-				this.tServer.close()
-				this.isListening = false
-			}
-		})
-
-		this.sPort.on('data', (data) => {
-			// make sure client is connected
-			if (this.tSockets.length > 0) {
-				// forward data to the TCP connection (data is a buffer)
-				this.log('debug', 'COM> ' + toHex(data.toString('latin1')) + ' ')
-				this.tSockets.forEach((sock) => sock.write(data))
-			}
-			clearInterval(this.SERIAL_INTERVAL)
-		})
-
-		this.sPort.open()
-
-		this.doUpdateStatus()
-	}
+//	init_serial() {
+//		if (this.sPortPath == '' || this.sPortPath === 'none') {
+//			// not configured yet
+//			return
+//		}
+//
+//		let portOptions = {
+//			path: this.sPortPath,
+//			autoOpen: false,
+//			baudRate: parseInt(this.config.baud),
+//			dataBits: parseInt(this.config.bits),
+//			stopBits: parseInt(this.config.stop),
+//			parity: this.config.parity,
+//		}
+//
+//		this.sPort = new SerialPort(portOptions)
+//
+//		this.sPort.on('error', this.doUpdateStatus.bind(this))
+//
+//		this.sPort.on('open', this.init_tcp.bind(this))
+//
+//		this.sPort.on('close', (err) => {
+//			this.doUpdateStatus(err)
+//			if (err.disconnected) {
+//				// close all connections
+//				this.tSockets.forEach((sock) => sock.end())
+//				this.tServer.close()
+//				this.isListening = false
+//			}
+//		})
+//
+//		this.sPort.on('data', (data) => {
+//			// make sure client is connected
+//			if (this.tSockets.length > 0) {
+//				// forward data to the TCP connection (data is a buffer)
+//				this.log('debug', 'COM> ' + toHex(data.toString('latin1')) + ' ')
+//				this.tSockets.forEach((sock) => sock.write(data))
+//			}
+//			clearInterval(this.SERIAL_INTERVAL)
+//		})
+//
+//		this.sPort.open()
+//
+//		this.doUpdateStatus()
+//	}
 
 	/**
 	 * Update the dynamic variable(s)
@@ -224,8 +251,8 @@ class ViscaRouter extends InstanceBase {
 	updateVariables() {
 		let addr = 'Not connected'
 
-		if (this.tSockets.length > 0) {
-			addr = this.tSockets.map((s) => s.remoteAddress + ':' + s.remotePort).join('\n')
+		if (this.viscas?.length > 0) {
+			addr = this.viscas.map((s) => s.remoteAddress + ':' + s.remotePort).join('\n')
 		}
 		this.setVariableValues({ ip_addr: addr })
 	}
@@ -234,44 +261,44 @@ class ViscaRouter extends InstanceBase {
 	 * Initialize the TCP server (after the serial port is ready)
 	 * @since 1.0.0
 	 */
-	init_tcp() {
-		let tServer = (this.tServer = new net.Server())
-
-		tServer.maxConnections = 4
-
-		tServer.on('error', (err) => {
-			this.doUpdateStatus(err)
-		})
-
-		tServer.on('connection', (socket) => {
-			let cid = socket.remoteAddress + ':' + socket.remotePort
-			this.tSockets.push(socket)
-			this.updateVariables()
-      socket.setKeepAlive(true,60000)
-
-			socket.on('err', this.doUpdateStatus.bind(this))
-
-			socket.on('close', () => {
-				this.tSockets.splice(this.tSockets.indexOf(socket), 1)
-				this.isListening = this.tSockets.length > 0
-				this.updateVariables()
-			})
-
-			socket.on('data', (data) => {
-				// forward data to the serial port
-				this.log('debug', 'TCP: ' + toHex(data.toString('latin1') + ' '))
-				this.sPort.write(data)
-				if (this.config.response == true) {
-					this.SERIAL_INTERVAL = setTimeout(this.sendError.bind(this), this.config.maxresponse)
-				}
-			})
-		})
-
-		tServer.listen(this.IPPort)
-
-		this.isListening = true
-		this.doUpdateStatus()
-	}
+//	init_tcp() {
+//		let tServer = (this.tServer = new net.Server())
+//
+//		tServer.maxConnections = 4
+//
+//		tServer.on('error', (err) => {
+//			this.doUpdateStatus(err)
+//		})
+//
+//		tServer.on('connection', (socket) => {
+//			let cid = socket.remoteAddress + ':' + socket.remotePort
+//			this.tSockets.push(socket)
+//			this.updateVariables()
+//      socket.setKeepAlive(true,60000)
+//
+//			socket.on('err', this.doUpdateStatus.bind(this))
+//
+//			socket.on('close', () => {
+//				this.tSockets.splice(this.tSockets.indexOf(socket), 1)
+//				this.isListening = this.tSockets.length > 0
+//				this.updateVariables()
+//			})
+//
+//			socket.on('data', (data) => {
+//				// forward data to the serial port
+//				this.log('debug', 'TCP: ' + toHex(data.toString('latin1') + ' '))
+//				this.sPort.write(data)
+//				if (this.config.response == true) {
+//					this.SERIAL_INTERVAL = setTimeout(this.sendError.bind(this), this.config.maxresponse)
+//				}
+//			})
+//		})
+//
+//		tServer.listen(this.IPPort)
+//
+//		this.isListening = true
+//		this.doUpdateStatus()
+//	}
 
 	/**
 	 * Send an error to all TCP sockets if no response was receieved on the Serial Port
@@ -349,10 +376,10 @@ class ViscaRouter extends InstanceBase {
 			this.doUpdateStatus()
 			this.findPorts()
 		}
-		if (setSerial) {
-			this.init_serial()
-			
-		}
+//		if (setSerial) {
+//			this.init_serial()
+//			
+//		}
 	}
 
 	/**
@@ -531,119 +558,7 @@ class ViscaRouter extends InstanceBase {
 			},
 			
 		]
-/*
-		if (this.foundPorts.length == 0) {
-			fields.push({
-				type: 'static-text',
-				id: 'info1',
-				width: 12,
-				label: 'Try again',
-				value:
-					"No ports detected yet, which may take a few seconds.<br>Select the 'Connections' tab and wait for log entry 'No serial port configured' Then choose 'Edit' to return here. ",
-			})
-		} else {
-			if (this.foundPorts && this.foundPorts.length) {
-				this.foundPorts.forEach((port) => {
-					ports.push({ id: port.path, label: `${port.manufacturer} (${port.path})` })
-				})
 
-				let portObj = ports.find((port) => port.id === this.config.sport)
-
-				if (!portObj) {
-					if (this.config.selectfirstfound) {
-						this.log('info', 'Previously selected port (' + this.config.sport + ') not found.')
-						if (this.ports?.length > 1) {
-							this.log('info', 'Selecting first found port: ' + ports[1].id)
-							this.config.sport = ports[1].id
-						}
-					}
-				}
-			} else {
-				ports = [{ id: 'none', label: 'No serial ports detected' }]
-			}
-			
- 
-			fields.push(
-				{
-					type: 'dropdown',
-          allowCustom: true,
-					id: 'sport',
-					label: 'Serial port',
-					width: 12,
-					value: ports[ports.length==1 ? 0 : 1].id,
-					choices: ports,
-				},
-				{
-					type: 'dropdown',
-					id: 'baud',
-					label: 'Baud Rate',
-					width: 6,
-					value: CHOICES.BAUD_RATES[0].id,
-					choices: CHOICES.BAUD_RATES,
-				},
-				{
-					type: 'dropdown',
-					id: 'bits',
-					label: 'Data Bits',
-					width: 6,
-					value: CHOICES.BITS[0].id,
-					choices: CHOICES.BITS,
-				},
-				{
-					type: 'dropdown',
-					id: 'parity',
-					label: 'Parity',
-					width: 6,
-					value: CHOICES.PARITY[0].id,
-					choices: CHOICES.PARITY,
-				},
-				{
-					type: 'dropdown',
-					id: 'stop',
-					label: 'Stop Bits',
-					width: 6,
-					value: CHOICES.STOP[0].id,
-					choices: CHOICES.STOP,
-				}
-			)
-
-			//Select First Port if Previous Port is Not Found
-			fields.push({
-				type: 'checkbox',
-				id: 'selectfirstfound',
-				label: 'Select First Found Port if Previously Configured Port is Not Found',
-				default: false,
-				width: 12,
-			})
-
-			//Response Expected fields
-			fields.push(
-				{
-					type: 'checkbox',
-					id: 'response',
-					label: 'Response Expected',
-					default: false,
-					width: 3,
-				},
-				{
-					type: 'textinput',
-					id: 'maxresponse',
-					label: 'Max Response Time Allowed (in ms)',
-					default: 1000,
-					width: 3,
-					isVisible: (configValues) => configValues.response === true,
-				},
-				{
-					type: 'textinput',
-					id: 'errormessage',
-					label: 'Message to emit to TCP Clients if no response received',
-					default: '&& ERR:NORESPONSE',
-					width: 3,
-					isVisible: (configValues) => configValues.response === true,
-				}
-			)
-		}
-*/		
 		for (let i = 1; i <= this.config.linkNumber; i++){
 			fields.push({
 				type: 'static-text',

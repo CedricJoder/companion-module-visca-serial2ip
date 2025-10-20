@@ -105,7 +105,7 @@ export class ViscaNetwork {
 			this.packet_counter = 0
 		}
 		
-		this.init()
+//		this.init()
 		
 		
 	}
@@ -158,6 +158,11 @@ export class ViscaNetwork {
 		if (type == 'IP') {
 			data = Buffer.from(msg)
 		} else {
+		// check sequence number
+			if (this.packet_counter == 0xffffffff) {
+				this.socket.send(Buffer.concat([this.control, this.reset_counter]))
+				this.packet_counter = 0
+			}
 		// copy message 
 			data = Buffer.alloc(msg.length + 8)
 			if (typeof msg == 'string') {
@@ -177,9 +182,10 @@ export class ViscaNetwork {
 			  if (this.module && this.module.config && this.module.config.verbose){
 			    this.module.log('debug', this.msgToString(buffer))
 			  }
-			  this.socket.send(data)
 			}
+		}
 	  }
+	  this.socket.send(data)
 		
 		
 		  
@@ -221,7 +227,7 @@ export class ViscaNetwork {
 		this.module.setVariableValues({ lastCmdSent: lastCmdSent })
 		this.udp.send(buffer)
 	}
-	}
+	
 
   // message to human readable form for log
 	msgToString(msg, separateBlocks = true) {
@@ -357,7 +363,7 @@ export class ViscaOIP {
     this.udp.on('listening', () => {
       this.module.log('info', 'UDP listening')
       this.module.updateStatus(InstanceStatus.Ok)
-      this.module.setAddress(1)
+ //     this.module.setAddress(1)
     })
 
     this.udp.on('status_change', (status, message) => {
