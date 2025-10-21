@@ -7,7 +7,7 @@ import { combineRgb, Regex, TCPHelper } from '@companion-module/base'
 import * as net from 'net'
 import { runEntrypoint, InstanceBase, InstanceStatus } from '@companion-module/base'
 import { SerialPort } from 'serialport'
-import { ViscaNetwork, ViscaOIP, ViscaSerial } from './visca.js'
+import { ViscaNetwork } from './visca.js'
 import * as CHOICES from './choices.js'
 
 const UpgradeScripts = []
@@ -50,20 +50,14 @@ class ViscaRouter extends InstanceBase {
 		this.log('debug', 'constructor')
 		// Wait a few seconds so we don't spam log with 'no ports/unconfigured'
 		// as those processes take a few moments to settle
-//		this.LOG_DELAY = 10000
+		this.LOG_DELAY = 10000
 
 		// module defaults
 		this.linkNumber = 2
 		this.foundPorts = []
 		this.viscas = []
-//		this.sPortPath = 'none'
-//		this.isOpen = false
-//		this.IPPort = 52381
+
 		this.devMode = process.env.DEVELOPER
-		
-//		this.viscaOIP = []
-		
-		this.log('debug', 'constructor')
 	}
 
 	/**
@@ -107,9 +101,10 @@ class ViscaRouter extends InstanceBase {
 //		}
 
 		this.viscas?.forEach((visca) => {
-			visca.destroy()
 			visca.removeAllListeners()
+			visca.destroy()
 		})
+		delete this.viscas
 	}
 
 	/**
@@ -144,16 +139,10 @@ class ViscaRouter extends InstanceBase {
 	applyConfig(config) {
 		this.config = config
 		this.clearAll()
+		this.viscas = []
+		
 		this.linkNumber = config.linkNumber || 2
-//		this.isListening = false
-//		this.IPPort = config.iport || 52381
-//		this.sPortPath = config.sport || 'none'
-//		this.tSockets = []
-//		this.viscaOIP = []
-//		for (let i = config.firstID; i < (config.firstID + config.devicesNumber); i++) {
-//		  this.viscaOIP[i] = new ViscaOIP(this, i)
-//		}
-//		this.isOpen = false
+		this.verbose = config.verbose
 
 		for (let i = 1; i <= this.linkNumber; i++) {
 			this['id'+i] = config['id'+i]
@@ -193,6 +182,34 @@ class ViscaRouter extends InstanceBase {
 		this.config = config
 		this.applyConfig(config)
 	}
+
+
+	condLog(level, log) {
+		if (this.verbose) {
+			this.log(level, log)
+		}
+	}
+
+
+	route(data, viscaProtocol, destId) {
+		// find destination id if not set
+		if (destId == undefined) {
+			let addressByte
+			if (viscaProtocol == 'SERIAL') {
+				addressByte = data.readUInt8(0)
+			} else {
+				addressByte = data.readUInt8(8)
+			}
+			destId = addressByte & 0x0F
+		}
+		
+		this.viscas?.forEach((visca) => {
+			if (destId == 8 || visca.viscaIds.includes(destId)) {
+				visca.send(data, viscaProtocol)
+			}
+		})
+	}
+
 
 	/**
 	 * Initialize the serial port and attach for read/write
@@ -565,36 +582,36 @@ class ViscaRouter extends InstanceBase {
 				id: 'spacer',
 				width: 12,
 				label: '   '
-				//value: 'Config for link ' + i,
 			},
 			{
 				type: 'static-text',
 				id: 'info'+i,
 				width: 12,
 				label: 'Config for link ' + i
-				//value: 'Config for link ' + i,
 			},
 			{
 				type: 'textinput',
-				id: 'id' + i,
+				id: 'ids' + i,
 				label: 'Machines Ids',
 				tooltip: 'List of machines id on the link, coma-separated (x,y,...)',
 				width: 6,
 				regex: '/^[0-7](,[0-7]){0,7}$/'
 			},
 			{
-				type: 'static-text',
-				id: 'spacer',
+				type: 'dropdown',
+				id: 'viscaProtocol' + i,
 				width: 6,
-				label: '   '
-				//value: 'Config for link ' + i,
+				label: 'Visca Protocol',
+				label: 'Visca Protocol',
+				choices : CHOICES.VISCA_PROTOCOL,
+				default : 'SERIAL'
 			},{
 				type: 'dropdown',
 				id: 'linkType' + i,
 				label: 'Link Type',
 				width: 4,
 				choices: CHOICES.LINK_TYPE,
-				value: CHOICES.LINK_TYPE[0].id
+				default: CHOICES.LINK_TYPE[0].id
 			},
 			{
 				type: 'dropdown',
@@ -683,10 +700,27 @@ class ViscaRouter extends InstanceBase {
 				isVisible: (options, data) => {
 		    	  return (['UDP', 'TCP_SERVER'].includes(options['linkType' + data.i]))},
 		   		isVisibleData: {"i" : i}
-			}
+			},
+			{
+				type: 'number',
+				id: 'forceDest' + i,
+				label: 'Force destination Id',
+				width: 4,
+				min: 0, 
+				max: 8,
+				isVisible: (options, data) => {
+		    	  return (options['viscaProtocol' + data.i] != 'SERIAL')},
+		   		isVisibleData: {"i" : i}
+			},
 		)}
 			
 	 fields.push(
+		{
+			type: 'static-text',
+			id: 'spacer',
+			width: 12,
+			label: ''
+		},
 	    {
 		    type: 'checkbox',
 			  id: 'verbose',

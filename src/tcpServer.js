@@ -28,7 +28,7 @@ export interface TCPHelperEvents {
 //	reconnect?: boolean
 //}
 export class TCPServer extends EventEmitter {
-    #host;
+//    #host;
     #port;
     _server;
     //	readonly #options: Required<TCPHelperOptions>
@@ -48,10 +48,10 @@ export class TCPServer extends EventEmitter {
     get isDestroyed() {
         return this.#destroyed;
     }
-    constructor(port, host) {
+    constructor(port) {
         super();
         let self = this;
-        this.#host = host;
+//        this.#host = host;
         this.#port = port;
         //		this.#options = {
         //			reconnect_interval: 2000,
@@ -102,7 +102,7 @@ export class TCPServer extends EventEmitter {
             this.#missingErrorHandlerTimer = undefined;
             if (!this.#destroyed && !this.listenerCount('error')) {
                 // The socket is active and has no listeners. Log an error for the module devs!
-                console.error(`Danger: TCP client for ${this.#host}:${this.#port} is missing an error handler!`);
+                console.error(`Danger: TCP server for port:${this.#port} is missing an error handler!`);
             }
         }, 5000);
     }
