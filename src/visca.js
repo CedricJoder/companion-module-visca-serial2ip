@@ -170,7 +170,16 @@ export class ViscaNetwork {
 			} else if (typeof msg == 'object' && msg instanceof Buffer) {
 				msg.copy(data, 8)
 			}
-			
+			// set destination id
+			let firstByte = data.readUint8(8)
+			let destId = firstbyte & 0x0F
+			if (destId != 8) {
+				firstbyte -= destId
+				if (this.viscaProtocol == 'IP Device') {
+					firstbyte ++
+				}
+				data.writeUInt8(firstbyte, 8)
+			}
 			// add header
 			let payloadType = this.findPayloadType(msg)
 			if (payloadType) {
@@ -185,10 +194,19 @@ export class ViscaNetwork {
 			}
 		}
 	  }
-	  this.socket.send(data)
+	  
+	  if (this.module && this.module.config && this.module.config.verbose) {
+			this.module.log('debug', this.msgToString(buffer))
+		}
 		
-		
+		this.lastCmdSent = buffer
+		let lastCmdSent = this.msgToString(buffer.slice(8), false)
+		this.module.setVariableValues({ lastCmdSent: lastCmdSent })
 		  
+		this.socket.send(data)
+		
+		
+		
 		  
 	  let headerSize = (this.remoteSerial) ? 0 : 8
 	  const buffer = Buffer.alloc(msg.length + headerSize)

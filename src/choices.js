@@ -24,6 +24,6 @@ export const IP_PROTOCOL = ['UDP', 'TCP'].map((v) => {
 	return {id: v, label:v}
 })
 
-export const VISCA_PROTOCOL = ['SERIAL', 'IP'].map((v) => {
+export const VISCA_PROTOCOL = ['SERIAL', 'IP Device', 'IP Controler'].map((v) => {
 	return {id: v, label: 'VISCA OVER ' + v}
 })
