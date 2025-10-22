@@ -191,7 +191,7 @@ class ViscaRouter extends InstanceBase {
 	}
 
 
-	route(data, viscaProtocol, destId) {
+	route(data, viscaProtocol, sourceLink, destId) {
 		// find destination id if not set
 		if (destId == undefined) {
 			let addressByte
@@ -204,62 +204,14 @@ class ViscaRouter extends InstanceBase {
 		}
 		
 		this.viscas?.forEach((visca) => {
-			if (destId == 8 || visca.viscaIds.includes(destId)) {
+			if ((sourceLink != visca.linkId) && (destId == 8 || visca.viscaIds.includes(destId))) {
 				visca.send(data, viscaProtocol)
 			}
 		})
 	}
 
 
-	/**
-	 * Initialize the serial port and attach for read/write
-	 * @since 1.0.0
-	 */
-//	init_serial() {
-//		if (this.sPortPath == '' || this.sPortPath === 'none') {
-//			// not configured yet
-//			return
-//		}
-//
-//		let portOptions = {
-//			path: this.sPortPath,
-//			autoOpen: false,
-//			baudRate: parseInt(this.config.baud),
-//			dataBits: parseInt(this.config.bits),
-//			stopBits: parseInt(this.config.stop),
-//			parity: this.config.parity,
-//		}
-//
-//		this.sPort = new SerialPort(portOptions)
-//
-//		this.sPort.on('error', this.doUpdateStatus.bind(this))
-//
-//		this.sPort.on('open', this.init_tcp.bind(this))
-//
-//		this.sPort.on('close', (err) => {
-//			this.doUpdateStatus(err)
-//			if (err.disconnected) {
-//				// close all connections
-//				this.tSockets.forEach((sock) => sock.end())
-//				this.tServer.close()
-//				this.isListening = false
-//			}
-//		})
-//
-//		this.sPort.on('data', (data) => {
-//			// make sure client is connected
-//			if (this.tSockets.length > 0) {
-//				// forward data to the TCP connection (data is a buffer)
-//				this.log('debug', 'COM> ' + toHex(data.toString('latin1')) + ' ')
-//				this.tSockets.forEach((sock) => sock.write(data))
-//			}
-//			clearInterval(this.SERIAL_INTERVAL)
-//		})
-//
-//		this.sPort.open()
-//
-//		this.doUpdateStatus()
-//	}
+
 
 	/**
 	 * Update the dynamic variable(s)
@@ -274,69 +226,6 @@ class ViscaRouter extends InstanceBase {
 		this.setVariableValues({ ip_addr: addr })
 	}
 
-	/**
-	 * Initialize the TCP server (after the serial port is ready)
-	 * @since 1.0.0
-	 */
-//	init_tcp() {
-//		let tServer = (this.tServer = new net.Server())
-//
-//		tServer.maxConnections = 4
-//
-//		tServer.on('error', (err) => {
-//			this.doUpdateStatus(err)
-//		})
-//
-//		tServer.on('connection', (socket) => {
-//			let cid = socket.remoteAddress + ':' + socket.remotePort
-//			this.tSockets.push(socket)
-//			this.updateVariables()
-//      socket.setKeepAlive(true,60000)
-//
-//			socket.on('err', this.doUpdateStatus.bind(this))
-//
-//			socket.on('close', () => {
-//				this.tSockets.splice(this.tSockets.indexOf(socket), 1)
-//				this.isListening = this.tSockets.length > 0
-//				this.updateVariables()
-//			})
-//
-//			socket.on('data', (data) => {
-//				// forward data to the serial port
-//				this.log('debug', 'TCP: ' + toHex(data.toString('latin1') + ' '))
-//				this.sPort.write(data)
-//				if (this.config.response == true) {
-//					this.SERIAL_INTERVAL = setTimeout(this.sendError.bind(this), this.config.maxresponse)
-//				}
-//			})
-//		})
-//
-//		tServer.listen(this.IPPort)
-//
-//		this.isListening = true
-//		this.doUpdateStatus()
-//	}
-
-	/**
-	 * Send an error to all TCP sockets if no response was receieved on the Serial Port
-	 * @since 1.0.7
-	 */
-
-	sendError() {
-		this.updateStatus(InstanceStatus.Error)
-		this.log(
-			'error',
-			'Error: No response received via Serial connection in the max allotted time of ' + this.config.maxresponse + 'ms'
-		)
-		let msg = this.config.errormessage
-		try {
-			this.tSockets.forEach((sock) => sock.write(msg))
-		} catch (error) {
-			this.log('debug', 'Unable to send error message to sockets: ' + error.toString())
-		}
-
-		clearInterval(this.SERIAL_INTERVAL)
-	}
 
 	/**
 	 * Update companion status and log
@@ -393,10 +282,6 @@ class ViscaRouter extends InstanceBase {
 			this.doUpdateStatus()
 			this.findPorts()
 		}
-//		if (setSerial) {
-//			this.init_serial()
-//			
-//		}
 	}
 
 	/**
@@ -447,8 +332,45 @@ class ViscaRouter extends InstanceBase {
 	 */
 
 	init_actions() {
-
+		let self = this
+		
 		let actionsArr = {
+			addressSet: {
+				name: 'Send address_set command for serial link',
+				options: [
+					{
+						type: 'dropdown',
+						label: 'Link',
+						id: 'linkId',
+						choices: this.viscas.filter((visca) => (visca.viscaProtocol == 'SERIAL')).map((v) => {return {id: v.linkId, label: v.portName}}),
+					},
+					{
+						type: 'number',
+						label: 'Id to set',
+						id: 'viscaId',
+						default: 1,
+					}
+				],
+				callback: async (action) => {
+					self.viscas[action.options.linkId].setAddress(action.options.viscaId)
+				}
+			},
+			
+			resetCounter: {
+				name: 'Send reset_counter command for IP link',
+				options: [
+					{
+						type: 'dropdown',
+						label: 'Link',
+						id: 'linkId',
+						choices: this.viscas.filter((visca) => (visca.viscaProtocol != 'SERIAL')).map((v) => {return {id: v.linkId, label: v.portName}}),
+					},
+				],
+				callback: async (action) => {
+					self.viscas[action.options.linkId].resetCounter()
+				}
+			},
+			
 			previousSPort: {
 				name: 'Select Previous Serial Port in List',
 				options: [],
@@ -524,8 +446,6 @@ class ViscaRouter extends InstanceBase {
 	init_variables() {
 		this.setVariableDefinitions([
 			{
-				name: 'Remote IP address',
-				variableId: 'ip_addr',
 			},
 		])
 	}
@@ -594,18 +514,26 @@ class ViscaRouter extends InstanceBase {
 				id: 'ids' + i,
 				label: 'Machines Ids',
 				tooltip: 'List of machines id on the link, coma-separated (x,y,...)',
-				width: 6,
+				width: 3,
 				regex: '/^[0-7](,[0-7]){0,7}$/'
 			},
 			{
 				type: 'dropdown',
 				id: 'viscaProtocol' + i,
-				width: 6,
+				width: 5,
 				label: 'Visca Protocol',
 				label: 'Visca Protocol',
 				choices : CHOICES.VISCA_PROTOCOL,
 				default : 'SERIAL'
-			},{
+			},
+			{
+		    type: 'checkbox',
+			id: 'verbose' + i,
+	  		label: 'Verbose log for link ' + i,
+		 	default: false,
+	 		width: 4,
+			},
+			{
 				type: 'dropdown',
 				id: 'linkType' + i,
 				label: 'Link Type',
@@ -711,71 +639,27 @@ class ViscaRouter extends InstanceBase {
 				isVisible: (options, data) => {
 		    	  return (options['viscaProtocol' + data.i] != 'SERIAL')},
 		   		isVisibleData: {"i" : i}
-			},
+			}
 		)}
 			
-	 fields.push(
-		{
-			type: 'static-text',
-			id: 'spacer',
-			width: 12,
-			label: ''
-		},
-	    {
-		    type: 'checkbox',
-			  id: 'verbose',
-	  		label: 'Verbose log',
-		 		default: false,
-	 			width: 3,
-	    }
-    )
+//	 fields.push(
+//		{
+//			type: 'static-text',
+//			id: 'spacer',
+//			width: 12,
+//			label: ''
+//		},
+//	    {
+//		    type: 'checkbox',
+//			  id: 'verbose',
+//	  		label: 'Verbose log',
+//		 		default: false,
+//	 			width: 3,
+//	    }
+//    )
 
 		return fields
 	}
-	
-	send (msg, type){
-	  let header
-	  if (typeof msg == 'string') {
-      header = parseInt(msg[0],16)
-    } else if (typeof msg == 'object' && msg instanceof Buffer) {
-      header = msg.readUInt8(0)
-    } else {
-      this.log('error', "Wrong message type")
-      return
-    }
-	  let receiver = header%16
-//	  this.log('debug', 'receiver : '+ receiver)
-	  if (receiver == 8) {
-	    this.viscaOIP.forEach((visca) => {
-	      visca.send(msg, type)
-	    })
-      this.viscaSerial.send(msg)
-	  }
-	  else if (this.viscaOIP[receiver]) {
-	    this.viscaOIP[receiver].send(msg, type)
-	  }
-	  else {
-	    if (this.viscaSerial) {
-	      this.viscaSerial.send(msg)
-	    }
-	  }
-	}
-	
-//	setAddress (id) {
-//	  for (; id < (this.config.firstID + this.config.devicesNumber); id++) {
-//	    let visca=this.viscaOIP[id]
-//	    if (visca) {
-//	      let msg = Buffer.from(ADDRESS_SET)
-//        msg.writeUInt8(id, 2)
-//	      visca.send(msg, visca.device_setting)
-//	    }
-//	  }
-//	  if (this.viscaSerial) {
-//	    let msg = Buffer.from(ADDRESS_SET)
-//	    msg.writeUInt8(id, 2)
-//	    this.viscaSerial.send(msg)
-//	  }
-//	}
 	
 }
 

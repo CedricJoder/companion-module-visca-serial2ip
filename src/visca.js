@@ -8,17 +8,6 @@ import * as COMMANDS from './ViscaCommands.js'
 
 
 
-function msgToString(msg, separateBlocks = true) {
-		let s = ''
-		for (let i = 0; i < msg.length; i++) {
-			s += msg[i].toString(16).padStart(2, '0') + ' '
-			if (separateBlocks && (i == 1 || i == 3 || i == 7 || i == 15 || i == 23)) {
-				s += '| '
-			}
-		}
-		return s.trim()
-	}
-	
 	
 export class ViscaNetwork extends EventEmitter {
 
@@ -47,6 +36,9 @@ export class ViscaNetwork extends EventEmitter {
 	get reset_counter() {
 	  return COMMANDS.RESET_COUNTER
 	}
+	get reset_counter_command() {
+		return Buffer.concat([COMMANDS.CONTROL, Buffer.from([0x00, 0x01, 0x00, 0x00, 0x00, 0x00]), COMMANDS.RESET_COUNTER])
+	}
 	get if_clear() {
 	  return COMMANDS.IF_CLEAR
 	}
@@ -60,13 +52,84 @@ export class ViscaNetwork extends EventEmitter {
 	  return COMMANDS.BROADCAST
 	}
 	
-	
+
+/**
+ * Destroys the instance
+ * @since 1.0.0
+ */
+ 	
 	destroy() {
 		if (this.socket) {
 		this.socket.destroy()
 		delete this.socket
 		this.module.updateStatus(InstanceStatus.Disconnected)
 		}
+	}
+	
+	
+	
+/**
+ * Formats the message to human readable sequence
+ * @param {buffer || string} msg: message to send
+ * @param {boolean} separateBlocks: separate blocks by function
+ * @since 1.0.0
+ */
+ 
+
+	msgToString(msg, separateBlocks) {
+		if (!separateBlocks) {
+			separateBlocks = (this.viscaProtocol != 'SERIAL')
+		}
+		let s = ''
+		for (let i = 0; i < msg.length; i++) {
+			s += msg[i].toString(16).padStart(2, '0') + ' '
+			if (separateBlocks && (i == 1 || i == 3 || i == 7 || i == 15 || i == 23)) {
+				s += '| '
+			}
+		}
+		return s.trim()
+	}
+	
+	
+/**
+ * Prints message in the log window
+ * @param {string} level: log level of the message
+ * @param {string || object} msg: message to print
+ * @param {boolean} alwaysDisplay: if false, only prints if the link is in verbose mode (default: true)
+ * @since 1.0.0
+ */
+	log(level, msg, alwaysDisplay = true) {
+		if (alwaysDisplay || this.verbose) {
+			this.module.log(level, `Link ${this.linkId} : ${msg}`)
+		}
+	}
+	
+	
+/**
+ * Separate commands arriving in the same packet
+ * @param {buffer} data: buffer to parse
+ * @since 1.0.0
+ */
+	parseCommands(data) {
+		let commands = []
+		switch (this.viscaProtocol) {
+			case 'SERIAL': 
+				let startIndex = 0, endIndex = 0
+				while (endIndex != -1 && startIndex < data.length) {
+				endIndex = data.indexOf(0xFF, startIndex)
+				commands.push(data.subarray(startIndex, endIndex + 1))
+				startIndex = endIndex + 1
+				}
+				break
+			default :
+				while (data.length > 0) {
+					let messageLength = data.readUint16BE(2) +8
+					commands.push(data.subarray(0, messageLength))
+					data = data.subarray(messageLength)
+				}
+				break
+		}				
+		return commands
 	}
 	
 	
@@ -79,6 +142,7 @@ export class ViscaNetwork extends EventEmitter {
 		this.viscaProtocol = routerModule.config['viscaProtocol'+linkId]
 		this.viscaIds = routerModule.config['ids'+linkId]?.split(",").map((v) => Number(v))
 		this.forceDest = routerModule.config['forceDest'+linkId]
+		this.verbose = routerModule.config['verbose'+linkId]
 		this.portName = ''
 		
 		switch (this.linkType) {
@@ -105,7 +169,7 @@ export class ViscaNetwork extends EventEmitter {
 				this.IPPort = routerModule.config['IPPort' + linkId]
 		}
 		
-		if (this.viscaProtocol == 'IP') {
+		if (this.viscaProtocol != 'SERIAL') {
 			this.packet_counter = 0
 		}
 		
@@ -137,7 +201,7 @@ export class ViscaNetwork extends EventEmitter {
 		
 				this.portName = this.sPort
 				this.socket = new SerialPort(portOptions)
-				this.module.log('debug', 'Opening serial port : ' + this.sPort)
+				this.log('debug', 'Opening serial port : ' + this.sPort)
 				this.socket.send = this.socket.write
 				this.socket.open()
 				
@@ -147,6 +211,9 @@ export class ViscaNetwork extends EventEmitter {
 				if (this.IP && this.IPPort) {
 					this.socket = new TCPHelper(this.IP, this.IPPort)
 					this.portName = 'TCP_CLIENT ' + this.IP + ':' + this.IPPort
+				} else {
+					this.log('error', 'Invalid config')
+					return
 				}
 				break
 				
@@ -154,6 +221,9 @@ export class ViscaNetwork extends EventEmitter {
 				if (this.localPort) {
 					this.socket = new TCPServer(this.localPort)
 					this.portName = 'TCP_SERVER :' + this.localPort
+				} else  {
+					this.log('error', 'Invalid config')
+					return
 				}
 				break
 				
@@ -161,54 +231,67 @@ export class ViscaNetwork extends EventEmitter {
 				if (this.IP && this.IPPort) {
 					this.socket = new UDPHelper (this.IP, this.IPPort, {bind_port: this.localPort})
 					this.portName = 'UDP ' + this.IP + ':' + this.IPPort
+				} else  {
+					this.log('error', 'Invalid config')
+					return
 				}
 				
 				break
 				
 			default :
-				this.module.log('error', 'Invalid config for link ' + this.linkId)
+				this.log('error', 'Invalid config')
 				return
 		}
 		
 		this.socket.on('error', (err) => {
-			self.module.log('error', 'Error on serial port ' + self.portName + ' : ' + err.message)
+			self.log('error', 'Error on port ' + self.portName + ' : ' + err.message)
 			self.module?.doUpdateStatus.bind(self.module)
 		})
 		
 		this.socket.on('open', (event) => {
-			this.module.log('debug', 'Port open : ' + self.portName)
+			this.log('debug', 'Port open : ' + self.portName)
 			self.module?.doUpdateStatus.bind(self.module)
 		})
 		
 		this.socket.on('close', () => {
-			self.module.log('debug', 'Closing port ' + self.portName)
+			self.log('debug', 'Closing port ' + self.portName)
 			self.module?.doUpdateStatus()
 		})
 		
 		this.socket.on('listening', () => {
-			self.module.log('debug', 'Socket listening : ' + self.portName)
+			self.log('debug', `Socket listening : ${self.linkType.slice(0,3)} port ${self.localPort}`)
 			self.module?.doUpdateStatus()
 		})
 		
 		this.socket.on('data', (data) => {
-			let destId, addressByte
-			self.module.condLog('debug', 'Incoming message from link ' + this.linkId + ' : ' + msgToString(data))
-			if (this.viscaProtocol == 'SERIAL') {
-				addressByte = data.readUint(0)
-				// find destination id for routing
-				destId = addressByte & 0x0F
-			} else {
-				addressByte = data.readUint8(8)
-				// find destination id for routing
-				destId = addressByte & 0x0F
-				// set source address
-				addressByte = (addressByte & 0x0F) + (16 * this.viscaIds[0]) + 128
-				data.writeUInt8(addressByte, 8)
+			let commands = self.parseCommands(data)
+			for (const command of commands) { 
+				let destId, addressByte
+				self.log('debug', 'Incoming message : ' + this.msgToString(command), false)
+				if (this.viscaProtocol == 'SERIAL') {
+					addressByte = command.readUint8(0)
+					// find destination id for routing
+					destId = addressByte & 0x0F
+				} else { 
+					addressByte = command.readUint8(8)
+					// find destination id for routing
+					destId = addressByte & 0x0F
+					// set source address
+					addressByte = (addressByte & 0x0F) + (16 * this.viscaIds[0]) + 128
+					command.writeUInt8(addressByte, 8)
+					if (this.viscaProtocol == 'IP_Controler') {
+						this.packet_counter = command.readUint32BE(4)
+						
+						if (command.subarray(8) == this.reset_counter) {
+							this.packet_counter = 0
+						}
+					}
+				}
+				self.module.route(command, self.viscaProtocol, self.linkId, destId)
 			}
-			self.module.route(data, self.viscaProtocol, destId)
 		})
 		
-
+		this.resetCounter()
 		
 		this.module.doUpdateStatus()
 		
@@ -220,13 +303,12 @@ export class ViscaNetwork extends EventEmitter {
 		if ((msg.subarray(1) == this.if_clear) || (msg.subarray(1) == this.cam_version_inq)){
 			return this.device_setting
 		}
-		let secondBite = msg.subarray(1,2)
-		
-		if (secondBite == 0x01) {
+		let secondByte = msg.readUint8(1)
+		if (secondByte == 0x01) {
 			return this.command
-		} else if (secondBite == 0x09) {
+		} else if (secondByte == 0x09) {
 			return this.inquiry
-		} else if ([0x40, 0x50, 0x60].includes(secondBite | 0x80)) {
+		} else if ([0x40, 0x50, 0x60].includes(secondByte | 0x80)) {
 			return this.reply
 		}
 	}
@@ -260,8 +342,7 @@ export class ViscaNetwork extends EventEmitter {
 		} else {
 		// check sequence number
 			if (this.packet_counter == 0xffffffff) {
-				this.socket.send(Buffer.concat([this.control, this.reset_counter]))
-				this.packet_counter = 0
+				this.resetCounter()
 			}
 		// copy message 
 			data = Buffer.alloc(msg.length + 8)
@@ -288,33 +369,44 @@ export class ViscaNetwork extends EventEmitter {
 			  data.writeUInt32BE(this.packet_counter, 4)
 			  this.packet_counter++
 			} else {
-			  this.module.log('error', "Can't find message type")
+			  this.log('error', "Can't find message type")
+			  return
 			}
 		}
 	  }
 	  
 	  if (this.module && this.module.config && this.module.config.verbose) {
-		this.module.log('debug', 'Sending through link ' + this.linkId + ' : ' + this.msgToString(data))
+		this.log('debug', 'Sending : ' + this.msgToString(data), false)
 	  }
 	  	  
 	  this.socket.send(data)
 	}
-		
-		
-		
-		
-
-  // message to human readable form for log
-	msgToString(msg, separateBlocks = true) {
-		let s = ''
-		for (let i = 0; i < msg.length; i++) {
-			s += msg[i].toString(16).padStart(2, '0') + ' '
-			if (separateBlocks && (i == 1 || i == 3 || i == 7 || i == 15 || i == 23)) {
-				s += '| '
-			}
-		}
-		return s.trim()
-	}
-}
-
 	
+/**
+ * Send reset sequence number command to device and resets internal counter
+ * @since 1.0.0
+ */
+	resetCounter() {
+		if (this.viscaProtocol == 'SERIAL') {
+			return
+		}
+		this.socket.send(this.reset_counter_command)
+		this.packet_counter = 0
+		this.log('debug', `Sending : ${this.msgToString(this.reset_counter_command)}`,false)
+	}
+	
+	
+/**
+ * Send address_set command to set device address on serial link
+ * @param {number} id: id to set
+ * @since 1.0.0
+ */
+	setAddress(id) {
+		let msg = Buffer.from(this.address_set)
+		msg.writeUInt8(id, 2)
+		this.send(msg, 'SERIAL')
+	}
+	
+}
+		
+		
