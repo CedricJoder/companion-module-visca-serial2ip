@@ -266,7 +266,7 @@ export class ViscaNetwork extends EventEmitter {
 		this.socket.on('data', (data) => {
 			let commands = self.parseCommands(data)
 			for (const command of commands) { 
-				let destId, addressByte
+				let sourceId, destId, addressByte
 				self.log('debug', 'Incoming message : ' + this.msgToString(command), false)
 				if (this.viscaProtocol == 'SERIAL') {
 					addressByte = command.readUint8(0)
@@ -274,10 +274,12 @@ export class ViscaNetwork extends EventEmitter {
 					destId = addressByte & 0x0F
 				} else { 
 					addressByte = command.readUint8(8)
-					// find destination id for routing
-					destId = addressByte & 0x0F
+					// set destination id
+					destId = this.forceDest ?? addressByte & 0x0F
+					}
 					// set source address
-					addressByte = (addressByte & 0x0F) + (16 * this.viscaIds[0]) + 128
+					sourceId = 0x80 + (16 * this.viscaIds[0])
+					addressByte = sourceId | destId
 					command.writeUInt8(addressByte, 8)
 					if (this.viscaProtocol == 'IP_Controler') {
 						this.packet_counter = command.readUint32BE(4)
@@ -352,14 +354,14 @@ export class ViscaNetwork extends EventEmitter {
 				msg.copy(data, 8)
 			}
 			// set destination id
-			let firstByte = data.readUint8(8)
-			let destId = firstByte & 0x0F
+			let addressByte = data.readUint8(8)
+			let destId = addressByte & 0x0F
 			if (destId != 8) {
-				firstByte -= destId
+				addressByte -= destId
 				if (this.viscaProtocol == 'IP_Device') {
-					firstByte ++
+					addressByte ++
 				}
-				data.writeUInt8(firstByte, 8)
+				data.writeUInt8(addressByte, 8)
 			}
 			// add header
 			let payloadType = this.findPayloadType(msg)
