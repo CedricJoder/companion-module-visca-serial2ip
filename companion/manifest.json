@@ -1,20 +1,16 @@
 {
-	"id": "sony-visca-serial2ip",
-	"name": "sony-visca-serial2ip",
-	"shortname": "visca2ip",
-	"description": "Sony Visca commands converter from serial interface to IP",
+	"id": "sony-visca-router",
+	"name": "sony-visca-router",
+	"shortname": "visca-router",
+	"description": "Visca commands router for interfacing multiple interfaces, serial and/or IP",
 	"version": "1.0.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-generic-tcp-serial.git",
 	"bugs": "https://github.com/bitfocus/companion-module-generic-tcp-serial/issues",
 	"maintainers": [
 		{
-			"name": "John A Knight Jr",
-			"email": "istnv@ayesti.com"
-		},
-		{
-			"name": "Joseph Adams",
-			"email": "josephdadams@gmail.com"
+			"name": "Joder Cedric",
+			"email": "cedric.joder@gmail.com"
 		}
 	],
 	"legacyIds": [],
@@ -26,12 +22,13 @@
 	},
 	"manufacturer": "Sony",
 	"products": [
-		"Visca serial to IP"
+		"Visca router"
 	],
 	"keywords": [
 		"IP",
 		"serial",
 		"RS232",
+		"RS422",
 		"Visca"
 	]
 }

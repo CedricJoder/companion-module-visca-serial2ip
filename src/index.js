@@ -236,29 +236,55 @@ class ViscaRouter extends InstanceBase {
 		let l
 		let m
 
-		if (this.isListening) {
-			l = 'info'
-			s = InstanceStatus.Ok
-			m = `Listening on TCP port ${this.IPPort}`
-		} else if (err) {
-			l = 'error'
-			s = InstanceStatus.Error
-			m = `Error: ${err.message}`
-		} else if (!this.foundPorts || this.startedAt + this.LOG_DELAY > Date.now()) {
-			// haven't scanned yet so the rest of the statuses don't apply
-			s = null
-		} else if (this.foundPorts.length == 0) {
-			l = 'error'
-			s = InstanceStatus.ConnectionFailure
-			m = 'No serial ports detected'
-		} else if (this.sPort && this.sPortPath !== 'none') {
+		let statuses = {
+			Disconnected: 0,
+			Connecting: 0,
+			Ok: 0
+		}
+		
+		for (const visca of this.viscas) {
+			switch (visca?.status) {
+				case InstanceStatus.ConnectionFailure :
+					l = 'error'
+					s = InstanceStatus.ConnectionFailure
+					m = 'Connection error'
+					this.updateStatus(s, m)
+					this.log(l, m)
+					//this.lastStatus = l + m + s
+					return
+				
+				case InstanceStatus.BadConfig :
+					l = 'error'
+					s = InstanceStatus.BadConfig
+					m = 'Bad config'
+					this.updateStatus(s, m)
+					this.log(l, m)
+					//this.lastStatus = l + m + s
+					return
+					
+				case InstanceStatus.Disconnected :
+					statuses.Disconnected++
+					break
+				case InstanceStatus.Connecting :
+					statuses.Connecting++
+					break
+				case InstanceStatus.Ok :
+					statuses.Ok++
+					break
+			}
+		}
+		if (statuses.Disconnected > 0) {
+			l = 'warning'
+			s = InstanceStatus.Disconnected
+			m = 'Device disconnected'
+		} else if (statuses.Connecting > 0) {
 			l = 'info'
 			s = InstanceStatus.Connecting
-			m = `Connecting to ${this.sPortPath}`
+			m = 'Connecting'
 		} else {
-			l = 'error'
-			s = InstanceStatus.BadConfig
-			m = 'No serial port configured'
+			l = 'debug'
+			s = InstanceStatus.Ok
+			m = 'All devices connected'
 		}
 
 		if (s != null && l + m + s != this.lastStatus) {
@@ -370,70 +396,6 @@ class ViscaRouter extends InstanceBase {
 					self.viscas[action.options.linkId].resetCounter()
 				}
 			},
-			
-			previousSPort: {
-				name: 'Select Previous Serial Port in List',
-				options: [],
-				callback: async (action, context) => {
-					try {
-						let index = this.foundPorts.findIndex((port) => port.path == this.config.sport)
-						index--
-
-						if (index > 0) {
-							this.log('info', 'Selecting previous Serial port in list: ' + this.foundPorts[index].path)
-							if (this.sPort) {
-								//close the serial port if it is already opened
-								this.log('info', 'First closing already open port: ' + this.config.sport)
-								this.sPort.removeAllListeners()
-								if (this.sPort.isOpen) {
-									this.sPort.close()
-								}
-								delete this.sPort
-							}
-
-							this.config.sport = this.foundPorts[index].path
-
-							this.applyConfig(this.config)
-						} else {
-							this.log('info', 'Cannot select previous Serial port in list: Already on the first port in the list.')
-						}
-					} catch (error) {
-						this.log('debug', 'Error Selecting previous Serial Port in List: ' + error.toString())
-					}
-				},
-			},
-
-			nextSPort: {
-				name: 'Select Next Serial Port in List',
-				options: [],
-				callback: async (action, context) => {
-					try {
-						let index = this.foundPorts.findIndex((port) => port.path == this.config.sport)
-						index++
-
-						if (index < this.foundPorts.length) {
-							this.log('info', 'Selecting next Serial port in list: ' + this.foundPorts[index].path)
-							if (this.sPort) {
-								//close the serial port if it is already opened
-								this.log('info', 'First closing already open port: ' + this.config.sport)
-								this.sPort.removeAllListeners()
-								if (this.sPort.isOpen) {
-									this.sPort.close()
-								}
-								delete this.sPort
-							}
-
-							this.config.sport = this.foundPorts[index].path
-
-							this.applyConfig(this.config)
-						} else {
-							this.log('info', 'Cannot select next Serial port in list: Already on the last port in the list.')
-						}
-					} catch (error) {
-						this.log('debug', 'Error Selecting next Serial Port in List: ' + error.toString())
-					}
-				},
-			},
 		}
 
 		this.setActionDefinitions(actionsArr)
@@ -496,7 +458,7 @@ class ViscaRouter extends InstanceBase {
 			
 		]
 
-		for (let i = 1; i <= this.config.linkNumber; i++){
+		for (let i = 1; i <= this.linkNumber; i++){
 			fields.push({
 				type: 'static-text',
 				id: 'spacer',

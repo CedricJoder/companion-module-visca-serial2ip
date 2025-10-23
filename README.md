@@ -1,2 +1,2 @@
-# companion-module-generic-tcp-serial
-Generic TCP to serial device bridge
+# companion-module-sony-visca-router
+A module to route visca commands over multiple networks and serial ports

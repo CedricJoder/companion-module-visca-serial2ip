@@ -1,37 +1,11 @@
 import net from 'net';
 import { EventEmitter } from 'eventemitter3';
-//import { InstanceStatus } from '../module-api/enums.js'
-import { //TCPHelperOptions, 
-InstanceStatus } from '@companion-module/base';
-/*
-export interface TCPHelperEvents {
-    // when an error occurs
-    error: [err: Error]
-    // a packet of data has been received
-    data: [msg: Buffer]
+import { InstanceStatus } from '@companion-module/base';
 
-    // the connection has opened
-    connect: []
-    // the socket has ended
-    end: []
-    // the write buffer has emptied
-    drain: []
 
-    // the connection status changes
-    status_change: [status: TCPStatuses, message: string | undefined]
-}
-*/
-//export interface TCPHelperOptions {
-/** default 2000 */
-//	reconnect_interval?: number
-/** default true */
-//	reconnect?: boolean
-//}
 export class TCPServer extends EventEmitter {
-//    #host;
     #port;
     _server;
-    //	readonly #options: Required<TCPHelperOptions>
     #clients = [];
     #connected = false;
     #listening = false;
@@ -51,13 +25,7 @@ export class TCPServer extends EventEmitter {
     constructor(port) {
         super();
         let self = this;
-//        this.#host = host;
         this.#port = port;
-        //		this.#options = {
-        //			reconnect_interval: 2000,
-        //			reconnect: true,
-        //			...options,
-        //		}
         this._server = new net.Server();
         this._server.on('error', (err) => {
             self.#new_status(InstanceStatus.UnknownError, err.message);
@@ -93,11 +61,7 @@ export class TCPServer extends EventEmitter {
             this.emit('end');
         });
         this._server.on('data', (data) => this.emit('data', data));
-        //		this._server.on('drop', () => this.emit('drop'))
-        // Let caller install event handlers first
-        //		setImmediate(() => {
-        //			if (!this.#destroyed) this.connect()
-        //		})
+		
         this.#missingErrorHandlerTimer = setTimeout(() => {
             this.#missingErrorHandlerTimer = undefined;
             if (!this.#destroyed && !this.listenerCount('error')) {
@@ -106,6 +70,7 @@ export class TCPServer extends EventEmitter {
             }
         }, 5000);
     }
+	
     async send(message) {
         let self = this;
         if (this.#destroyed)
@@ -161,4 +126,3 @@ export class TCPServer extends EventEmitter {
         }
     }
 }
-//# sourceMappingURL=tcpServer.js.map
